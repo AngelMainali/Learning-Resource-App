@@ -1,0 +1,157 @@
+.note-detail {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.note-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 30px;
+  padding: 30px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.note-info h1 {
+  color: #2c3e50;
+  margin-bottom: 15px;
+  font-size: 2.2rem;
+  line-height: 1.3;
+}
+
+.note-meta {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 15px;
+  flex-wrap: wrap;
+}
+
+.note-meta span {
+  font-size: 0.9rem;
+  color: #7f8c8d;
+}
+
+.category {
+  background: #3498db;
+  color: white !important;
+  padding: 4px 12px;
+  border-radius: 15px;
+  font-weight: 500;
+}
+
+.note-rating {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.star {
+  color: #f39c12;
+  font-size: 1.2rem;
+}
+
+.star.filled {
+  color: #f39c12;
+}
+
+.rating-text {
+  color: #7f8c8d;
+  font-size: 0.9rem;
+}
+
+.download-btn {
+  font-size: 1.1rem;
+  padding: 12px 24px;
+  white-space: nowrap;
+}
+
+.note-image {
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.note-image img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.note-content {
+  background: white;
+  padding: 30px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  margin-bottom: 30px;
+}
+
+.note-description,
+.note-full-content {
+  margin-bottom: 25px;
+}
+
+.note-description h3,
+.note-full-content h3 {
+  color: #2c3e50;
+  margin-bottom: 15px;
+  font-size: 1.4rem;
+}
+
+.note-description p,
+.content-text p {
+  color: #555;
+  line-height: 1.7;
+  margin-bottom: 10px;
+}
+
+.note-tags {
+  border-top: 1px solid #ecf0f1;
+  padding-top: 20px;
+}
+
+.note-tags h4 {
+  color: #2c3e50;
+  margin-bottom: 10px;
+}
+
+.tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag {
+  background: #ecf0f1;
+  color: #2c3e50;
+  padding: 6px 12px;
+  border-radius: 15px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.interactions {
+  display: grid;
+  gap: 30px;
+}
+
+@media (max-width: 768px) {
+  .note-header {
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .note-info h1 {
+    font-size: 1.8rem;
+  }
+
+  .note-meta {
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .download-btn {
+    width: 100%;
+  }
+}

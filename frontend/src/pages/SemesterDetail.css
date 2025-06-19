@@ -1,0 +1,142 @@
+.breadcrumb {
+  margin-bottom: 30px;
+  padding: 15px 0;
+  color: #7f8c8d;
+  font-size: 0.9rem;
+}
+
+.breadcrumb a {
+  color: #3498db;
+  text-decoration: none;
+}
+
+.breadcrumb a:hover {
+  text-decoration: underline;
+}
+
+.semester-header {
+  background: white;
+  border-radius: 15px;
+  padding: 40px;
+  margin-bottom: 40px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+}
+
+.semester-info {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+}
+
+.semester-number-large {
+  flex-shrink: 0;
+  width: 120px;
+  height: 120px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.semester-number-large span {
+  color: white;
+  font-size: 3rem;
+  font-weight: 700;
+}
+
+.semester-details h1 {
+  font-size: 2.5rem;
+  color: #2c3e50;
+  margin-bottom: 15px;
+  font-weight: 600;
+}
+
+.semester-description {
+  color: #7f8c8d;
+  font-size: 1.1rem;
+  line-height: 1.6;
+  margin-bottom: 25px;
+}
+
+.semester-stats {
+  display: flex;
+  gap: 40px;
+}
+
+.stat {
+  text-align: center;
+}
+
+.stat-number {
+  display: block;
+  font-size: 2rem;
+  font-weight: 700;
+  color: #3498db;
+}
+
+.stat-label {
+  display: block;
+  font-size: 0.9rem;
+  color: #7f8c8d;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.subjects-section h2 {
+  font-size: 2rem;
+  color: #2c3e50;
+  margin-bottom: 30px;
+  font-weight: 600;
+}
+
+.subjects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 25px;
+}
+
+.no-subjects {
+  text-align: center;
+  padding: 60px 20px;
+  color: #7f8c8d;
+}
+
+.no-subjects h3 {
+  color: #2c3e50;
+  margin-bottom: 10px;
+}
+
+@media (max-width: 768px) {
+  .semester-header {
+    padding: 25px;
+  }
+
+  .semester-info {
+    flex-direction: column;
+    text-align: center;
+    gap: 20px;
+  }
+
+  .semester-number-large {
+    width: 100px;
+    height: 100px;
+  }
+
+  .semester-number-large span {
+    font-size: 2.5rem;
+  }
+
+  .semester-details h1 {
+    font-size: 2rem;
+  }
+
+  .semester-stats {
+    justify-content: center;
+    gap: 30px;
+  }
+
+  .subjects-grid {
+    grid-template-columns: 1fr;
+  }
+}

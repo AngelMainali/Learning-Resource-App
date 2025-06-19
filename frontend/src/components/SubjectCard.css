@@ -1,0 +1,143 @@
+.subject-card {
+  display: block;
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  text-decoration: none;
+  color: inherit;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+  position: relative;
+}
+
+.subject-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  border-color: #3498db;
+  text-decoration: none;
+}
+
+.subject-thumbnail {
+  height: 180px;
+  overflow: hidden;
+  background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+}
+
+.subject-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.subject-content {
+  padding: 25px;
+  position: relative;
+}
+
+.subject-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.subject-code {
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  color: white;
+  padding: 6px 12px;
+  border-radius: 15px;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.subject-credits {
+  background: #ecf0f1;
+  color: #2c3e50;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.subject-name {
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #2c3e50;
+  margin-bottom: 10px;
+  line-height: 1.3;
+}
+
+.subject-description {
+  color: #7f8c8d;
+  line-height: 1.5;
+  margin-bottom: 20px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.subject-stats {
+  border-top: 1px solid #ecf0f1;
+  padding-top: 15px;
+}
+
+.stat-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.stat-item {
+  font-size: 0.85rem;
+  color: #7f8c8d;
+  font-weight: 500;
+}
+
+.subject-rating {
+  display: flex;
+  align-items: center;
+}
+
+.star {
+  color: #f39c12;
+  font-size: 1rem;
+  margin-right: 1px;
+}
+
+.rating-text {
+  margin-left: 8px;
+  font-size: 0.85rem;
+  color: #7f8c8d;
+}
+
+.subject-arrow {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  font-size: 1.2rem;
+  color: #3498db;
+  transition: transform 0.3s ease;
+}
+
+.subject-card:hover .subject-arrow {
+  transform: translateX(3px);
+}
+
+@media (max-width: 768px) {
+  .subject-content {
+    padding: 20px;
+  }
+
+  .subject-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .stat-row {
+    flex-direction: column;
+    gap: 5px;
+  }
+}
