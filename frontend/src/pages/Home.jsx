@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
-import { BookOpen, Users, ArrowRight, GraduationCap } from "lucide-react"
+import { BookOpen, ArrowRight, Youtube, Users, Award } from "lucide-react"
 import axios from "axios"
 
 const Home = () => {
@@ -16,26 +16,19 @@ const Home = () => {
 
   const fetchSemesters = async () => {
     try {
-      console.log("Fetching semesters from: /api/semesters/")
       const response = await axios.get("/api/semesters/")
-      console.log("Semesters response:", response.data)
-
-      // Handle both paginated and non-paginated responses
       const semestersData = response.data.results || response.data || []
 
-      // Create array for semesters 1-8, filling missing ones
       const allSemesters = []
       for (let i = 1; i <= 8; i++) {
         const existingSemester = semestersData.find((sem) => sem.number === i)
         if (existingSemester) {
           allSemesters.push(existingSemester)
         } else {
-          // Create placeholder for missing semester
           allSemesters.push({
             id: `placeholder-${i}`,
             number: i,
             name: `Semester ${i}`,
-            description: "No subjects added yet",
             total_subjects: 0,
             total_notes: 0,
             is_placeholder: true,
@@ -47,17 +40,14 @@ const Home = () => {
       setError("")
     } catch (error) {
       console.error("Error fetching semesters:", error)
-      console.error("Error details:", error.response?.data)
-      setError(`Failed to load semesters: ${error.message}. Make sure Django backend is running on port 8000.`)
+      setError("Connection failed")
 
-      // Create placeholder semesters if API fails
       const placeholderSemesters = []
       for (let i = 1; i <= 8; i++) {
         placeholderSemesters.push({
           id: `placeholder-${i}`,
           number: i,
           name: `Semester ${i}`,
-          description: "Backend not connected",
           total_subjects: 0,
           total_notes: 0,
           is_placeholder: true,
@@ -74,7 +64,7 @@ const Home = () => {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading semesters...</p>
+          <p className="text-gray-600">Loading...</p>
         </div>
       </div>
     )
@@ -83,15 +73,65 @@ const Home = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 text-white">
+      <section className="bg-gradient-to-r from-blue-600 to-blue-800 text-white relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
           <div className="text-center">
-            <GraduationCap className="h-16 w-16 mx-auto mb-6 text-blue-200" />
-            <h1 className="text-4xl md:text-6xl font-bold mb-6">Academic Notes Hub</h1>
-            <p className="text-xl md:text-2xl text-blue-100 mb-8 max-w-3xl mx-auto">
-              Choose your semester, select your subject, and access comprehensive study materials instantly.
+            {/* Large Logo above Engineer Sathi */}
+            <div className="mb-6">
+              <img
+                src="/logo.jpg"
+                alt="Engineer Sathi Logo"
+                className="h-24 w-24 mx-auto object-contain mb-4 rounded-lg shadow-lg"
+              />
+            </div>
+            <h1 className="text-4xl md:text-6xl font-bold mb-6">Engineer Sathi</h1>
+            <p className="text-xl md:text-2xl text-blue-100 mb-8 max-w-3xl mx-auto">Your Engineering Study Companion</p>
+
+            {/* YouTube CTA - Prominent placement */}
+            <div className="flex justify-center mb-8">
+              <a
+                href="https://youtube.com/@engineersathi"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-red-600 hover:bg-red-700 text-white px-8 py-4 rounded-full font-semibold text-lg flex items-center space-x-3 transition-all duration-300 transform hover:scale-105 shadow-lg"
+              >
+                <Youtube className="h-6 w-6" />
+                <span>Watch Our YouTube Channel</span>
+              </a>
+            </div>
+          </div>
+        </div>
+
+      
+      </section>
+
+      {/* About Engineer Sathi */}
+      <section className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">About Engineer Sathi</h2>
+            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+              Engineer Sathi is your trusted companion for engineering studies. We provide comprehensive study
+              materials, notes, and resources to help engineering students excel in their academic journey.
             </p>
-            <div className="text-lg text-blue-200">📚 Simple Navigation: Semester → Subject → Notes</div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="text-center">
+              <BookOpen className="h-12 w-12 text-blue-600 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Quality Notes</h3>
+              <p className="text-gray-600">Comprehensive study materials for all engineering subjects</p>
+            </div>
+            <div className="text-center">
+              <Users className="h-12 w-12 text-blue-600 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Community</h3>
+              <p className="text-gray-600">Join thousands of engineering students in our community</p>
+            </div>
+            <div className="text-center">
+              <Award className="h-12 w-12 text-blue-600 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Success</h3>
+              <p className="text-gray-600">Helping students achieve academic excellence</p>
+            </div>
           </div>
         </div>
       </section>
@@ -106,56 +146,12 @@ const Home = () => {
       )}
 
       {/* Semesters Grid */}
-      <section className="py-16">
+      <section className="py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 mb-4">Choose Your Semester</h2>
-            <p className="text-gray-600 max-w-2xl mx-auto">
-              Select from 8 semesters to access organized study materials for your academic journey
-            </p>
-          </div>
-
-          {/* 8 Semester Grid */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {semesters.map((semester) => (
               <SemesterCard key={semester.id} semester={semester} />
             ))}
-          </div>
-
-          {/* Debug Section - Remove after testing */}
-          <div className="mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <h3 className="font-semibold text-yellow-800 mb-2">🔍 Debug Info:</h3>
-            <div className="text-sm text-yellow-700 space-y-1">
-              <p>Total semesters loaded: {semesters.length}</p>
-              {semesters.map((sem, index) => (
-                <p key={index}>
-                  • Semester {sem.number}: ID={sem.id}, Subjects={sem.total_subjects}, Clickable=
-                  {!sem.is_placeholder || sem.total_subjects > 0 ? "Yes" : "No"}
-                </p>
-              ))}
-            </div>
-          </div>
-
-          {/* Quick Stats */}
-          <div className="mt-16 text-center">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="bg-white p-6 rounded-lg shadow-sm">
-                <div className="text-3xl font-bold text-blue-600 mb-2">
-                  {semesters.reduce((total, sem) => total + (sem.total_subjects || 0), 0)}
-                </div>
-                <div className="text-gray-600">Total Subjects</div>
-              </div>
-              <div className="bg-white p-6 rounded-lg shadow-sm">
-                <div className="text-3xl font-bold text-green-600 mb-2">
-                  {semesters.reduce((total, sem) => total + (sem.total_notes || 0), 0)}
-                </div>
-                <div className="text-gray-600">Total Notes</div>
-              </div>
-              <div className="bg-white p-6 rounded-lg shadow-sm">
-                <div className="text-3xl font-bold text-purple-600 mb-2">8</div>
-                <div className="text-gray-600">Semesters Available</div>
-              </div>
-            </div>
           </div>
         </div>
       </section>
@@ -163,54 +159,37 @@ const Home = () => {
   )
 }
 
-// Semester Card Component
+// Simplified Semester Card Component
 const SemesterCard = ({ semester }) => {
   const isPlaceholder = semester.is_placeholder
   const hasContent = semester.total_subjects > 0
 
-  // Don't make placeholder semesters without content clickable
   if (isPlaceholder && !hasContent) {
     return (
-      <div className="bg-white rounded-xl shadow-sm border-2 border-dashed border-gray-300 p-6 text-center opacity-60 cursor-not-allowed">
-        <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-          <span className="text-2xl font-bold text-gray-400">{semester.number}</span>
+      <div className="bg-white rounded-xl shadow-sm border-2 border-dashed border-gray-300 p-8 text-center opacity-60 cursor-not-allowed">
+        <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
+          <span className="text-3xl font-bold text-gray-400">{semester.number}</span>
         </div>
-        <h3 className="text-lg font-semibold text-gray-400 mb-2">{semester.name}</h3>
-        <p className="text-gray-400 text-sm mb-4">{semester.description}</p>
-        <div className="text-xs text-gray-400">No subjects added yet</div>
+        <h3 className="text-xl font-semibold text-gray-400">Semester {semester.number}</h3>
       </div>
     )
   }
 
-  // For real semesters with content, make them clickable
   return (
     <Link
-      to={`/semester/${semester.id}`}
-      className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-lg transition-all duration-300 hover:-translate-y-2 group text-center cursor-pointer"
+      to={`/semester/${semester.number}`}
+      className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 hover:shadow-lg transition-all duration-300 hover:-translate-y-2 group text-center cursor-pointer hover:border-blue-300"
     >
-      <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-        <span className="text-2xl font-bold text-white">{semester.number}</span>
+      <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
+        <span className="text-3xl font-bold text-white">{semester.number}</span>
       </div>
 
-      <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
-        {semester.name}
+      <h3 className="text-xl font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
+        Semester {semester.number}
       </h3>
-      <p className="text-gray-600 text-sm mb-4 line-clamp-2">{semester.description}</p>
 
-      <div className="flex justify-center space-x-4 text-sm text-gray-500 mb-4">
-        <div className="flex items-center">
-          <BookOpen className="h-4 w-4 mr-1" />
-          {semester.total_subjects || 0} Subjects
-        </div>
-        <div className="flex items-center">
-          <Users className="h-4 w-4 mr-1" />
-          {semester.total_notes || 0} Notes
-        </div>
-      </div>
-
-      <div className="flex items-center justify-center text-blue-600 group-hover:text-blue-700">
-        <span className="text-sm font-medium mr-1">Explore</span>
-        <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+      <div className="mt-4 flex items-center justify-center text-blue-600 group-hover:text-blue-700">
+        <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
       </div>
     </Link>
   )

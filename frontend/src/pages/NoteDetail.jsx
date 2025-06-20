@@ -1,15 +1,16 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useParams, Link } from "react-router-dom"
-import { ArrowLeft, Download, Calendar, FileText } from "lucide-react"
-import axios from "axios"
+import { useParams, useNavigate } from "react-router-dom"
+import { ArrowLeft, Eye } from "lucide-react"
 import DocumentViewer from "../components/DocumentViewer"
 
 const NoteDetail = () => {
   const { id } = useParams()
+  const navigate = useNavigate()
   const [note, setNote] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     fetchNote()
@@ -17,10 +18,15 @@ const NoteDetail = () => {
 
   const fetchNote = async () => {
     try {
-      const response = await axios.get(`http://localhost:8000/api/notes/${id}/`)
-      setNote(response.data)
+      setLoading(true)
+      const response = await fetch(`http://127.0.0.1:8000/api/notes/${id}/`)
+      if (!response.ok) {
+        throw new Error("Note not found")
+      }
+      const data = await response.json()
+      setNote(data)
     } catch (error) {
-      console.error("Error fetching note:", error)
+      setError(error.message)
     } finally {
       setLoading(false)
     }
@@ -28,41 +34,66 @@ const NoteDetail = () => {
 
   const handleDownload = async () => {
     try {
-      const response = await axios.get(`http://localhost:8000/api/notes/${id}/download/`, {
-        responseType: "blob",
-      })
+      const response = await fetch(`http://127.0.0.1:8000/api/notes/${id}/download/`)
+      if (!response.ok) {
+        throw new Error("Download failed")
+      }
 
-      const url = window.URL.createObjectURL(new Blob([response.data]))
-      const link = document.createElement("a")
-      link.href = url
-      link.setAttribute("download", `${note.title}.pdf`)
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement("a")
+      a.href = url
+      a.download = note.file?.split("/").pop() || "download"
+      document.body.appendChild(a)
+      a.click()
       window.URL.revokeObjectURL(url)
-
-      fetchNote() // Refresh to update download count
+      document.body.removeChild(a)
     } catch (error) {
-      console.error("Error downloading file:", error)
+      alert("Download failed: " + error.message)
+    }
+  }
+
+  const handleDownloadCountUpdate = (newCount) => {
+    // Update the note state with new download count
+    setNote((prevNote) => ({
+      ...prevNote,
+      downloads: newCount,
+    }))
+  }
+
+  const handleBackToSubject = () => {
+    if (note?.subject) {
+      navigate(`/subject/${note.subject}`)
+    } else {
+      navigate(-1)
     }
   }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading note...</p>
+        </div>
       </div>
     )
   }
 
-  if (!note) {
+  if (error) {
     return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900">Note not found</h1>
-          <Link to="/" className="text-primary-600 hover:text-primary-700 mt-4 inline-block">
-            ← Back to Home
-          </Link>
+          <div className="text-red-500 text-6xl mb-4">❌</div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Note Not Found</h2>
+          <p className="text-gray-600 mb-6">{error}</p>
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors mx-auto"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Go Back
+          </button>
         </div>
       </div>
     )
@@ -70,91 +101,46 @@ const NoteDetail = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center mb-4">
-            <Link to="/" className="flex items-center text-gray-600 hover:text-gray-900 mr-4">
-              <ArrowLeft className="h-5 w-5 mr-1" />
-              Back to Home
-            </Link>
-          </div>
+      <div className="max-w-5xl mx-auto px-4 py-6">
+        {/* Header with Back Button and Title */}
+        <div className="mb-6">
+          <button
+            onClick={handleBackToSubject}
+            className="flex items-center text-gray-600 hover:text-gray-900 transition-colors mb-4"
+          >
+            <ArrowLeft className="h-5 w-5 mr-2" />
+            Back to Subject
+          </button>
 
-          <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between">
-            <div className="flex-1 mb-6 lg:mb-0">
-              <div className="flex items-center space-x-2 mb-3">
-                <span className="bg-primary-100 text-primary-700 px-3 py-1 rounded-full text-sm font-medium">
-                  {note.subject_code}
-                </span>
-                <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-sm font-medium">
-                  {note.note_type}
-                </span>
-                {note.chapter && (
-                  <span className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm font-medium">
-                    📖 {note.chapter}
-                  </span>
-                )}
-              </div>
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">{note.title}</h1>
+              {note.description && <p className="text-gray-600 text-lg mb-4">{note.description}</p>}
 
-              <h1 className="text-3xl font-bold text-gray-900 mb-3">{note.title}</h1>
-              <p className="text-gray-600 mb-4">{note.description}</p>
-
-              <div className="flex flex-wrap gap-6 text-sm text-gray-500">
+              {/* Quick Info - Only Downloads */}
+              <div className="flex items-center text-sm text-gray-500">
                 <div className="flex items-center">
-                  <Download className="h-4 w-4 mr-1" />
-                  {note.downloads} downloads
-                </div>
-                <div className="flex items-center">
-                  <Calendar className="h-4 w-4 mr-1" />
-                  {new Date(note.created_at).toLocaleDateString()}
-                </div>
-                <div className="flex items-center">
-                  <FileText className="h-4 w-4 mr-1" />
-                  {note.file ? "File Available" : "Text Only"}
+                  <Eye className="h-4 w-4 mr-1" />
+                  {note.downloads || 0} downloads
                 </div>
               </div>
             </div>
-
-            {/* Only show download button in header if there's a file */}
-            {note.file && (
-              <button onClick={handleDownload} className="btn btn-primary px-6 py-3 text-lg">
-                <Download className="h-5 w-5 mr-2" />
-                Download Note
-              </button>
-            )}
           </div>
         </div>
-      </div>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Content */}
-        {note.content && (
-          <div className="card mb-8">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center">
-              <FileText className="h-5 w-5 mr-2" />📝 Note Content
-            </h2>
-            <div className="prose max-w-none">
-              <div className="bg-gray-50 p-6 rounded-lg border">
-                {note.content.split("\n").map((paragraph, index) => (
-                  <p key={index} className="mb-3 text-gray-700 leading-relaxed">
-                    {paragraph || "\u00A0"}
-                  </p>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Document Viewer */}
+        <DocumentViewer note={note} onDownload={handleDownload} onDownloadCountUpdate={handleDownloadCountUpdate} />
 
-        {/* Document Viewer - Only show if there's a file */}
-        {note.file && <DocumentViewer note={note} onDownload={handleDownload} />}
-
-        {/* Tags */}
+        {/* Tags Section (if exists) */}
         {note.tags && (
-          <div className="card mb-8">
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">🏷️ Tags</h3>
+          <div className="mt-6 bg-white rounded-lg shadow-sm border p-4">
+            <h3 className="text-lg font-semibold text-gray-900 mb-3">Tags</h3>
             <div className="flex flex-wrap gap-2">
               {note.tags.split(",").map((tag, index) => (
-                <span key={index} className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-sm">
+                <span
+                  key={index}
+                  className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm hover:bg-gray-200 transition-colors"
+                >
                   {tag.trim()}
                 </span>
               ))}

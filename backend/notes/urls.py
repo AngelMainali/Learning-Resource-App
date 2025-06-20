@@ -8,21 +8,23 @@ urlpatterns = [
     
     # Subjects
     path('subjects/', views.SubjectListView.as_view(), name='subject-list'),
-    path('subjects/<int:pk>/', views.SubjectDetailView.as_view(), name='subject-detail'),
     path('semesters/<int:semester_id>/subjects/', views.SubjectListView.as_view(), name='semester-subjects'),
+    path('subjects/<int:pk>/', views.SubjectDetailView.as_view(), name='subject-detail'),
     
     # Notes
     path('notes/', views.NoteListView.as_view(), name='note-list'),
-    path('notes/<int:pk>/', views.NoteDetailView.as_view(), name='note-detail'),
     path('subjects/<int:subject_id>/notes/', views.NoteListView.as_view(), name='subject-notes'),
+    path('notes/<int:pk>/', views.NoteDetailView.as_view(), name='note-detail'),
     path('notes/<int:pk>/download/', views.download_note, name='note-download'),
+    path('notes/<int:pk>/file/', views.serve_note_file, name='note-file'),
+    path('notes/<int:pk>/increment-download/', views.increment_download, name='increment-download'),
     
     # Comments and Ratings
-    path('notes/<int:note_id>/comments/', views.CommentCreateView.as_view(), name='note-comments'),
-    path('notes/<int:note_id>/ratings/', views.RatingCreateView.as_view(), name='note-ratings'),
+    path('notes/<int:note_id>/comments/', views.CommentCreateView.as_view(), name='comment-create'),
+    path('notes/<int:note_id>/ratings/', views.RatingCreateView.as_view(), name='rating-create'),
     
     # Feedback
-    path('feedback/', views.FeedbackCreateView.as_view(), name='feedback'),
+    path('feedback/', views.FeedbackCreateView.as_view(), name='feedback-create'),
     
     # Stats and Featured
     path('stats/', views.stats, name='stats'),

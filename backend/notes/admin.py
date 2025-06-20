@@ -28,34 +28,22 @@ class BulkNoteForm(forms.ModelForm):
     
     class Meta:
         model = Note
-        fields = ['subject', 'note_type', 'chapter', 'tags', 'files']
+        fields = ['subject', 'note_type', 'chapter', 'tags']
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Make files field not required for editing existing notes
+        if self.instance and self.instance.pk:
+            self.fields['files'].required = False
+    
+    def save_m2m(self):
+        # Required method for Django admin compatibility
+        pass
     
     def save(self, commit=True):
-        files = self.cleaned_data.get('files', [])
-        if not isinstance(files, list):
-            files = [files] if files else []
-        
-        notes = []
-        for file in files:
-            if file:
-                # Create a new note for each file
-                note = Note(
-                    subject=self.cleaned_data['subject'],
-                    note_type=self.cleaned_data['note_type'],
-                    chapter=self.cleaned_data.get('chapter', ''),
-                    tags=self.cleaned_data.get('tags', ''),
-                    file=file
-                )
-                # Auto-generate title from filename
-                filename = file.name.rsplit('.', 1)[0]
-                note.title = filename.replace('_', ' ').replace('-', ' ').title()
-                note.description = f"Notes for {note.title}"
-                
-                if commit:
-                    note.save()
-                notes.append(note)
-        
-        return notes
+    # For admin compatibility, just save the instance normally
+    # The actual bulk creation is handled in NoteAdmin.save_model
+     return super().save(commit=commit)
 
 @admin.register(Semester)
 class SemesterAdmin(admin.ModelAdmin):
@@ -92,16 +80,17 @@ class NoteAdmin(admin.ModelAdmin):
     def get_form(self, request, obj=None, **kwargs):
         if obj is None:  # Adding new note - use bulk upload form
             kwargs['form'] = BulkNoteForm
-        else:  # Editing existing note - use default form without 'files' field
-            kwargs['form'] = forms.ModelForm
+        else:  # Editing existing note - use default ModelForm
+            # Use default ModelForm for editing
+            pass
         
         form = super().get_form(request, obj, **kwargs)
         
-        if obj is None:  # Adding new note
+        if obj is None and hasattr(form, 'base_fields'):  # Adding new note
             form.base_fields['subject'].queryset = Subject.objects.select_related('semester').filter(is_active=True).order_by('semester__number', 'name')
         
         return form
-    
+        
     def get_fieldsets(self, request, obj=None):
         if obj is None:  # Adding new note
             return (
@@ -130,15 +119,38 @@ class NoteAdmin(admin.ModelAdmin):
             )
     
     def save_model(self, request, obj, form, change):
-        if hasattr(form, 'cleaned_data') and form.cleaned_data.get('files'):
-            # Handle multiple file upload
-            notes = form.save(commit=True)
-            if notes:
-                count = len(notes)
-                messages.success(request, f'Successfully created {count} notes from uploaded files.')
-                return
+        if not change and hasattr(form, 'cleaned_data') and form.cleaned_data.get('files'):
+            # Handle multiple file upload for new notes
+            files = form.cleaned_data.get('files', [])
+            if not isinstance(files, list):
+                files = [files] if files else []
+            
+            if files:
+                # Create multiple notes from files
+                notes_created = []
+                for file in files:
+                    if file:
+                        # Create a new note for each file
+                        note = Note(
+                            subject=form.cleaned_data['subject'],
+                            note_type=form.cleaned_data['note_type'],
+                            chapter=form.cleaned_data.get('chapter', ''),
+                            tags=form.cleaned_data.get('tags', ''),
+                            file=file
+                        )
+                        # Auto-generate title from filename
+                        filename = file.name.rsplit('.', 1)[0]
+                        note.title = filename.replace('_', ' ').replace('-', ' ').title()
+                        note.description = f"Notes for {note.title}"
+                        note.save()
+                        notes_created.append(note)
+                
+                if notes_created:
+                    count = len(notes_created)
+                    messages.success(request, f'Successfully created {count} notes from uploaded files.')
+                    return
         
-        # Handle single note save
+        # Handle single note save (editing or single file upload)
         if not obj.title and obj.file:
             filename = obj.file.name.rsplit('.', 1)[0]
             obj.title = filename.replace('_', ' ').replace('-', ' ').title()
@@ -146,10 +158,6 @@ class NoteAdmin(admin.ModelAdmin):
             obj.description = f"Notes for {obj.title}"
         
         super().save_model(request, obj, form, change)
-    
-    def response_add(self, request, obj, post_url_continue=None):
-        # After adding, redirect to changelist to see all notes
-        return super().response_add(request, obj, post_url_continue)
 
     actions = ['mark_featured', 'unmark_featured']
     

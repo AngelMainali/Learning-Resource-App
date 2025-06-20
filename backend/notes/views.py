@@ -1,10 +1,14 @@
 from rest_framework import generics, status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from django.http import HttpResponse, Http404
+from django.http import HttpResponse, Http404, FileResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
+from django.views.decorators.clickjacking import xframe_options_exempt
+from django.conf import settings
+import os
+import mimetypes
 from .models import Semester, Subject, Note, Comment, Rating, Feedback
 from .serializers import (
     SemesterListSerializer, SemesterDetailSerializer,
@@ -18,8 +22,19 @@ class SemesterListView(generics.ListAPIView):
     serializer_class = SemesterListSerializer
 
 class SemesterDetailView(generics.RetrieveAPIView):
-    queryset = Semester.objects.filter(is_active=True)
     serializer_class = SemesterDetailSerializer
+    
+    def get_object(self):
+        semester_number = self.kwargs['pk']
+        try:
+            # Try to get by semester number first
+            return Semester.objects.get(number=semester_number, is_active=True)
+        except Semester.DoesNotExist:
+            # Fallback to ID for backward compatibility
+            try:
+                return Semester.objects.get(id=semester_number, is_active=True)
+            except Semester.DoesNotExist:
+                raise Http404("Semester not found")
 
 class SubjectListView(generics.ListAPIView):
     serializer_class = SubjectListSerializer
@@ -27,7 +42,16 @@ class SubjectListView(generics.ListAPIView):
     def get_queryset(self):
         semester_id = self.kwargs.get('semester_id')
         if semester_id:
-            return Subject.objects.filter(semester_id=semester_id, is_active=True)
+            # Try to find semester by number first, then by ID
+            try:
+                semester = Semester.objects.get(number=semester_id, is_active=True)
+            except Semester.DoesNotExist:
+                try:
+                    semester = Semester.objects.get(id=semester_id, is_active=True)
+                except Semester.DoesNotExist:
+                    return Subject.objects.none()
+            
+            return Subject.objects.filter(semester=semester, is_active=True)
         return Subject.objects.filter(is_active=True)
 
 class SubjectDetailView(generics.RetrieveAPIView):
@@ -67,18 +91,100 @@ class NoteDetailView(generics.RetrieveAPIView):
 
 @api_view(['GET'])
 def download_note(request, pk):
+    """Download note file WITHOUT incrementing counter (counter handled separately)"""
     note = get_object_or_404(Note, pk=pk)
     
     if not note.file:
         raise Http404("File not found")
     
-    # Increment download count
-    note.downloads += 1
-    note.save()
+    try:
+        file_path = note.file.path
+        if not os.path.exists(file_path):
+            raise Http404("File not found on disk")
+        
+        # Get filename
+        filename = os.path.basename(file_path)
+        
+        # Create download response WITHOUT incrementing counter
+        response = FileResponse(
+            open(file_path, 'rb'),
+            content_type='application/octet-stream'
+        )
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
+        return response
+        
+    except Exception as e:
+        raise Http404(f"Error downloading file: {str(e)}")
+
+@api_view(['GET'])
+@xframe_options_exempt
+def serve_note_file(request, pk):
+    """Serve note file for viewing (without incrementing download counter)"""
+    note = get_object_or_404(Note, pk=pk)
     
-    response = HttpResponse(note.file.read(), content_type='application/octet-stream')
-    response['Content-Disposition'] = f'attachment; filename="{note.file.name.split("/")[-1]}"'
-    return response
+    if not note.file:
+        raise Http404("File not found")
+    
+    try:
+        file_path = note.file.path
+        if not os.path.exists(file_path):
+            raise Http404("File not found on disk")
+        
+        # Get file extension
+        file_extension = os.path.splitext(file_path)[1].lower()
+        filename = os.path.basename(file_path)
+        
+        # Set content type
+        content_type_map = {
+            '.pdf': 'application/pdf',
+            '.doc': 'application/msword',
+            '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            '.ppt': 'application/vnd.ms-powerpoint',
+            '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+            '.xls': 'application/vnd.ms-excel',
+            '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+            '.jpg': 'image/jpeg',
+            '.jpeg': 'image/jpeg',
+            '.png': 'image/png',
+            '.gif': 'image/gif',
+            '.txt': 'text/plain',
+            '.csv': 'text/csv',
+        }
+        
+        content_type = content_type_map.get(file_extension, 'application/octet-stream')
+        
+        # Create response for viewing (not downloading)
+        response = FileResponse(
+            open(file_path, 'rb'),
+            content_type=content_type
+        )
+        
+        # Add CORS headers
+        response['Access-Control-Allow-Origin'] = '*'
+        response['Access-Control-Allow-Methods'] = 'GET, HEAD, OPTIONS'
+        response['Access-Control-Allow-Headers'] = '*'
+        response['Cache-Control'] = 'public, max-age=3600'
+        
+        # Set content disposition for inline viewing
+        if file_extension in ['.pdf', '.jpg', '.jpeg', '.png', '.gif', '.txt']:
+            response['Content-Disposition'] = f'inline; filename="{filename}"'
+        else:
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        
+        return response
+        
+    except Exception as e:
+        raise Http404(f"Error serving file: {str(e)}")
+
+@api_view(['POST'])
+@csrf_exempt
+def increment_download(request, pk):
+    """Increment download counter only"""
+    note = get_object_or_404(Note, pk=pk)
+    note.downloads += 1
+    note.save(update_fields=['downloads'])
+    return Response({'downloads': note.downloads, 'success': True})
 
 @method_decorator(csrf_exempt, name='dispatch')
 class CommentCreateView(generics.CreateAPIView):
