@@ -28,7 +28,13 @@ const Feedback = () => {
     setSubmitting(true)
 
     try {
-      await axios.post("/api/feedback/", formData)
+      console.log("Submitting feedback:", formData)
+      const response = await axios.post("http://localhost:8000/api/feedback/", formData, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+      console.log("Feedback response:", response.data)
       setSubmitted(true)
       setFormData({
         name: "",
@@ -39,6 +45,8 @@ const Feedback = () => {
       })
     } catch (error) {
       console.error("Error submitting feedback:", error)
+      console.error("Error details:", error.response?.data)
+      alert(`Failed to submit feedback: ${error.response?.data?.detail || error.message}`)
     } finally {
       setSubmitting(false)
     }

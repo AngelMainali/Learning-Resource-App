@@ -17,7 +17,7 @@ const NoteDetail = () => {
 
   const fetchNote = async () => {
     try {
-      const response = await axios.get(`/api/notes/${id}/`)
+      const response = await axios.get(`http://localhost:8000/api/notes/${id}/`)
       setNote(response.data)
     } catch (error) {
       console.error("Error fetching note:", error)
@@ -28,7 +28,7 @@ const NoteDetail = () => {
 
   const handleDownload = async () => {
     try {
-      const response = await axios.get(`/api/notes/${id}/download/`, {
+      const response = await axios.get(`http://localhost:8000/api/notes/${id}/download/`, {
         responseType: "blob",
       })
 
@@ -115,6 +115,7 @@ const NoteDetail = () => {
               </div>
             </div>
 
+            {/* Only show download button in header if there's a file */}
             {note.file && (
               <button onClick={handleDownload} className="btn btn-primary px-6 py-3 text-lg">
                 <Download className="h-5 w-5 mr-2" />
@@ -144,8 +145,8 @@ const NoteDetail = () => {
           </div>
         )}
 
-        {/* Document Viewer */}
-        <DocumentViewer note={note} onDownload={handleDownload} />
+        {/* Document Viewer - Only show if there's a file */}
+        {note.file && <DocumentViewer note={note} onDownload={handleDownload} />}
 
         {/* Tags */}
         {note.tags && (

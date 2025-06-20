@@ -16,12 +16,12 @@ const Home = () => {
 
   const fetchSemesters = async () => {
     try {
-      console.log("Fetching semesters...") // Debug log
+      console.log("Fetching semesters from: /api/semesters/")
       const response = await axios.get("/api/semesters/")
-      console.log("Semesters response:", response.data) // Debug log
+      console.log("Semesters response:", response.data)
 
-      // Ensure we have exactly 8 semesters (1-8)
-      const semestersData = Array.isArray(response.data) ? response.data : []
+      // Handle both paginated and non-paginated responses
+      const semestersData = response.data.results || response.data || []
 
       // Create array for semesters 1-8, filling missing ones
       const allSemesters = []
@@ -47,7 +47,8 @@ const Home = () => {
       setError("")
     } catch (error) {
       console.error("Error fetching semesters:", error)
-      setError("Failed to load semesters. Make sure the backend is running.")
+      console.error("Error details:", error.response?.data)
+      setError(`Failed to load semesters: ${error.message}. Make sure Django backend is running on port 8000.`)
 
       // Create placeholder semesters if API fails
       const placeholderSemesters = []

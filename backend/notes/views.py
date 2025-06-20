@@ -3,6 +3,8 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.http import HttpResponse, Http404
 from django.shortcuts import get_object_or_404
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
 from .models import Semester, Subject, Note, Comment, Rating, Feedback
 from .serializers import (
     SemesterListSerializer, SemesterDetailSerializer,
@@ -78,6 +80,7 @@ def download_note(request, pk):
     response['Content-Disposition'] = f'attachment; filename="{note.file.name.split("/")[-1]}"'
     return response
 
+@method_decorator(csrf_exempt, name='dispatch')
 class CommentCreateView(generics.CreateAPIView):
     serializer_class = CommentSerializer
     
@@ -86,6 +89,7 @@ class CommentCreateView(generics.CreateAPIView):
         note = get_object_or_404(Note, id=note_id)
         serializer.save(note=note)
 
+@method_decorator(csrf_exempt, name='dispatch')
 class RatingCreateView(generics.CreateAPIView):
     serializer_class = RatingSerializer
     
@@ -94,6 +98,7 @@ class RatingCreateView(generics.CreateAPIView):
         note = get_object_or_404(Note, id=note_id)
         serializer.save(note=note)
 
+@method_decorator(csrf_exempt, name='dispatch')
 class FeedbackCreateView(generics.CreateAPIView):
     serializer_class = FeedbackSerializer
 
