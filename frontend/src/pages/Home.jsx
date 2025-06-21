@@ -4,6 +4,8 @@ import { useState, useEffect } from "react"
 import { Link } from "react-router-dom"
 import { BookOpen, ArrowRight, Youtube, Users, Award } from "lucide-react"
 import axios from "axios"
+import { API_URL } from "../config"
+import logoImage from "/Logo.jpg"
 
 const Home = () => {
   const [semesters, setSemesters] = useState([])
@@ -16,7 +18,7 @@ const Home = () => {
 
   const fetchSemesters = async () => {
     try {
-      const response = await axios.get("/api/semesters/")
+      const response = await axios.get(`${API_URL}/api/semesters/`)
       const semestersData = response.data.results || response.data || []
 
       const allSemesters = []
@@ -79,7 +81,7 @@ const Home = () => {
             {/* Large Logo above Engineer Sathi */}
             <div className="mb-6">
               <img
-                src="/logo.jpg"
+                src={logoImage || "/placeholder.svg"}
                 alt="Engineer Sathi Logo"
                 className="h-24 w-24 mx-auto object-contain mb-4 rounded-lg shadow-lg"
               />

@@ -1,5 +1,6 @@
 import "./Footer.css"
 import { Link } from "react-router-dom"
+import logoImage from "/Logo.jpg"
 
 const Footer = () => {
   return (
@@ -7,7 +8,7 @@ const Footer = () => {
       <div className="footer-content">
         <div className="footer-section">
           <div className="footer-brand">
-            <img src="/logo.jpg" alt="Engineer Sathi Logo" className="footer-logo" />
+            <img src={logoImage || "/placeholder.svg"} alt="Engineer Sathi Logo" className="footer-logo" />
             <h3>Engineer Sathi</h3>
           </div>
           <p>
