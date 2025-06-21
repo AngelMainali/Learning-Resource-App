@@ -117,21 +117,15 @@ REST_FRAMEWORK = {
 
 # CORS settings for frontend
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
+    "https://learning-resource-app-baea.vercel.app"
 ]
 
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_ALL_ORIGINS = True  # Only for development
+#CORS_ALLOW_ALL_ORIGINS = True  # Only for development
 
 # CSRF settings - Disable CSRF for API endpoints
 CSRF_TRUSTED_ORIGINS = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000", 
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
+   "https://learning-resource-app-baea.vercel.app"
 ]
 
 # Disable CSRF for API views
