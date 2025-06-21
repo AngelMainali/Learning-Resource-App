@@ -130,13 +130,18 @@ CORS_ALLOW_CREDENTIALS = True
 
 # CSRF settings - Disable CSRF for API endpoints
 CSRF_TRUSTED_ORIGINS = [
-   "https://learning-resource-app-baea.vercel.app"
+    "https://learning-resource-app-rbum.onrender.com",
+    "https://www.angelmainali.com.np",
+    "https://learning-resource-app-baea.vercel.app",
 ]
 
-# Disable CSRF for API views
-CSRF_COOKIE_SECURE = False
-CSRF_COOKIE_HTTPONLY = False
-CSRF_USE_SESSIONS = False
+# These should be True in production
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
+
+# Optional, but recommended:
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
 
 # File upload settings
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB
