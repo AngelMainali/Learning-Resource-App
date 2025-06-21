@@ -90,7 +90,7 @@ const Home = () => {
             {/* YouTube CTA - Prominent placement */}
             <div className="flex justify-center mb-8">
               <a
-                href="https://youtube.com/@engineersathi"
+                href="https://www.youtube.com/@EngineerSathi-o9m"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="bg-red-600 hover:bg-red-700 text-white px-8 py-4 rounded-full font-semibold text-lg flex items-center space-x-3 transition-all duration-300 transform hover:scale-105 shadow-lg"
