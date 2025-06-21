@@ -14,7 +14,7 @@ DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
 #ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
 
-ALLOWED_HOSTS=['learning-resource-app-rbum.onrender.com','www.angelmainali.com.np']
+ALLOWED_HOSTS=['learning-resource-app-rbum.onrender.com','www.angelmainali.com.np','learning-resource-app-baea.vercel.app']
 
 # Application definition
 INSTALLED_APPS = [
