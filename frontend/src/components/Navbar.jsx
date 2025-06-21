@@ -2,6 +2,8 @@
 
 import { Link } from "react-router-dom"
 import { MessageSquare } from "lucide-react"
+import logoImage from "/Logo.jpg"
+
 
 const Navbar = () => {
   return (
@@ -10,7 +12,7 @@ const Navbar = () => {
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-3">
-            <img src="/Logo.jpg" alt="Engineer Sathi Logo" className="h-10 w-10 object-contain rounded" />
+            <img  src={logoImage || "/placeholder.svg"} alt="Engineer Sathi Logo" className="h-10 w-10 object-contain rounded" />
             <span className="text-xl font-bold text-gray-900">Engineer Sathi</span>
           </Link>
 
