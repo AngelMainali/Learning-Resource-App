@@ -25,3 +25,21 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Add to .gitignore
+.env
+.env.local
+.env.production
+*.env
+
+# Database
+db.sqlite3
+*.db
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Media files (if containing sensitive uploads)
+media/

@@ -4,6 +4,7 @@ import { useState } from "react"
 import { MessageSquare, Send, CheckCircle, ArrowLeft } from "lucide-react"
 import { Link } from "react-router-dom"
 import axios from "axios"
+import { API_URL } from "../config"
 
 const Feedback = () => {
   const [formData, setFormData] = useState({
@@ -29,7 +30,7 @@ const Feedback = () => {
 
     try {
       console.log("Submitting feedback:", formData)
-      const response = await axios.post("http://localhost:8000/api/feedback/", formData, {
+      const response = await axios.post(`${API_URL}/api/feedback/`, formData, {
         headers: {
           "Content-Type": "application/json",
         },

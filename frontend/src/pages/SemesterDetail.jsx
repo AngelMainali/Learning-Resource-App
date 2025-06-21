@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useParams, Link } from "react-router-dom"
 import { ArrowLeft, BookOpen, FileText, ArrowRight } from "lucide-react"
-import axios from "axios"
+import { API_URL } from "../config"
 
 const SemesterDetail = () => {
   const { id } = useParams()
@@ -16,7 +16,7 @@ const SemesterDetail = () => {
 
   const fetchSemester = async () => {
     try {
-      const response = await axios.get(`/api/semesters/${id}/`)
+      const response = await fetch(`${API_URL}/api/semesters/${id}/`)
       setSemester(response.data)
     } catch (error) {
       console.error("Error fetching semester:", error)

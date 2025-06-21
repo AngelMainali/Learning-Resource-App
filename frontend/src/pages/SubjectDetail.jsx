@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useParams, Link } from "react-router-dom"
 import { ArrowLeft, FileText, Download, Youtube } from "lucide-react"
 import axios from "axios"
+import { API_URL } from "../config"
 
 const SubjectDetail = () => {
   const { id } = useParams()
@@ -18,7 +19,7 @@ const SubjectDetail = () => {
 
   const fetchSubject = async () => {
     try {
-      const response = await axios.get(`/api/subjects/${id}/`)
+      const response = await fetch(`${API_URL}/api/subjects/${id}/`)
       setSubject(response.data)
     } catch (error) {
       console.error("Error fetching subject:", error)
@@ -28,7 +29,7 @@ const SubjectDetail = () => {
   const fetchNotes = async () => {
     try {
       setLoading(true)
-      const response = await axios.get(`/api/subjects/${id}/notes/`)
+      const response = await fetch(`${API_URL}/api/subjects/${id}/notes/`)
       setNotes(response.data.results || response.data)
     } catch (error) {
       console.error("Error fetching notes:", error)
