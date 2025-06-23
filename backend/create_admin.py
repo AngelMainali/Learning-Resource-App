@@ -18,8 +18,11 @@ if not all([username, password, email]):
     print("❌ Missing environment variables.")
     print(f"Username: {username}, Password: {password}, Email: {email}")
 else:
+    # 🔥 Delete existing user with same username (use carefully!)
     if User.objects.filter(username=username).exists():
-        print(f"ℹ️ Superuser '{username}' already exists.")
-    else:
-        User.objects.create_superuser(username=username, password=password, email=email)
-        print(f"✅ Superuser '{username}' created.")
+        print(f"⚠️ Superuser '{username}' exists. Deleting...")
+        User.objects.get(username=username).delete()
+
+    # ✅ Create new superuser
+    User.objects.create_superuser(username=username, password=password, email=email)
+    print(f"✅ Superuser '{username}' created.")
