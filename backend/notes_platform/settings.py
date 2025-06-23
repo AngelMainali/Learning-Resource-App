@@ -124,7 +124,7 @@ CORS_ALLOWED_ORIGINS = [
     'https://learning-resource-app-baea-gpm1gw0eq.vercel.app'
 ]
 
-CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_CREDENTIALS = False
 #CORS_ALLOW_ALL_ORIGINS = True  # Only for development
 
 # CSRF settings - Disable CSRF for API endpoints
