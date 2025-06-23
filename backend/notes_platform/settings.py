@@ -15,7 +15,7 @@ DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
 #ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
 
-ALLOWED_HOSTS=['learning-resource-app-rbum.onrender.com','www.angelmainali.com.np','learning-resource-app-baea-gpm1gw0eq.vercel.app']
+ALLOWED_HOSTS=['learning-resource-app-rbum.onrender.com',"api.angelmainali.com.np",'learning-resource-app-baea-gpm1gw0eq.vercel.app']
 
 # Application definition
 INSTALLED_APPS = [
@@ -121,7 +121,8 @@ REST_FRAMEWORK = {
 
 # CORS settings for frontend
 CORS_ALLOWED_ORIGINS = [
-    'https://learning-resource-app-baea-gpm1gw0eq.vercel.app'
+    'https://learning-resource-app-baea-gpm1gw0eq.vercel.app',
+    'https://www.angelmainali.com.np'
 ]
 
 CORS_ALLOW_CREDENTIALS = False
