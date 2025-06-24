@@ -156,17 +156,6 @@ const SubjectDetail = () => {
         </div>
       )}
 
-      {/* Debug Banner (only in development) */}
-      {process.env.NODE_ENV === "development" && (
-        <div className="bg-blue-50 border-l-4 border-blue-400 p-4">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <details className="text-xs">
-              <summary className="cursor-pointer font-bold">Debug Info (Click to expand)</summary>
-              <pre className="mt-2 text-xs overflow-auto">{JSON.stringify(debugInfo, null, 2)}</pre>
-            </details>
-          </div>
-        </div>
-      )}
 
       {/* Header */}
       <div className="bg-white shadow-sm">
@@ -194,9 +183,6 @@ const SubjectDetail = () => {
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
               <p className="text-gray-600">Loading notes...</p>
-              <p className="text-xs text-gray-500 mt-1">
-                Fetching from: {API_URL}/api/subjects/{id}/notes/
-              </p>
             </div>
           </div>
         ) : notes.length === 0 ? (
@@ -212,11 +198,6 @@ const SubjectDetail = () => {
           </div>
         ) : (
           <>
-            <div className="mb-4 text-center">
-              <p className="text-sm text-gray-600">
-                Found {notes.length} note{notes.length !== 1 ? "s" : ""}
-              </p>
-            </div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {notes.map((note) => (
                 <Link
