@@ -30,43 +30,40 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
   const fileName = note.file.split("/").pop() || "document"
   const fileExtension = fileName.split(".").pop()?.toLowerCase()
 
-  // Clean the file path and create comprehensive URL patterns
-  const cleanFilePath = note.file.startsWith("/") ? note.file : `/${note.file}`
-  const filePathWithoutSlash = note.file.startsWith("/") ? note.file.substring(1) : note.file
+  // Handle both full URLs and relative paths
+  let fileUrls = []
 
-  // Comprehensive URL patterns to test
-  const fileUrls = [
-    // Direct file paths
-    `${API_URL}${cleanFilePath}`,
-    `${API_URL}/${filePathWithoutSlash}`,
+  if (note.file.startsWith("http")) {
+    // If note.file is already a complete URL, use it directly
+    console.log("File is already a complete URL:", note.file)
+    fileUrls = [
+      note.file, // Use the complete URL as-is
+      note.file.replace("http://", "https://"), // Try HTTPS version
+    ]
+  } else {
+    // If note.file is a relative path, construct URLs
+    const cleanFilePath = note.file.startsWith("/") ? note.file : `/${note.file}`
+    const filePathWithoutSlash = note.file.startsWith("/") ? note.file.substring(1) : note.file
 
-    // Media folder variations
-    `${API_URL}/media${cleanFilePath}`,
-    `${API_URL}/media/${filePathWithoutSlash}`,
+    fileUrls = [
+      // Direct file paths
+      `${API_URL}${cleanFilePath}`,
+      `${API_URL}/${filePathWithoutSlash}`,
 
-    // Static files
-    `${API_URL}/static${cleanFilePath}`,
-    `${API_URL}/static/${filePathWithoutSlash}`,
+      // Media folder variations
+      `${API_URL}/media${cleanFilePath}`,
+      `${API_URL}/media/${filePathWithoutSlash}`,
 
-    // API endpoints
-    `${API_URL}/api/notes/${note.id}/file/`,
-    `${API_URL}/api/notes/${note.id}/download/`,
-    `${API_URL}/api/notes/${note.id}/serve/`,
+      // API endpoints
+      `${API_URL}/api/notes/${note.id}/file/`,
+      `${API_URL}/api/notes/${note.id}/download/`,
+    ]
+  }
 
-    // Files folder
-    `${API_URL}/files${cleanFilePath}`,
-    `${API_URL}/files/${filePathWithoutSlash}`,
-
-    // Uploads folder
-    `${API_URL}/uploads${cleanFilePath}`,
-    `${API_URL}/uploads/${filePathWithoutSlash}`,
-  ]
-
-  console.log("=== DocumentViewer Comprehensive Debug ===")
+  console.log("=== DocumentViewer Debug ===")
   console.log("API_URL:", API_URL)
   console.log("note.file:", note.file)
-  console.log("cleanFilePath:", cleanFilePath)
-  console.log("filePathWithoutSlash:", filePathWithoutSlash)
+  console.log("File is complete URL:", note.file.startsWith("http"))
   console.log("Generated URLs:", fileUrls)
 
   // File type info
@@ -79,12 +76,12 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
 
   const fileInfo = getFileInfo()
 
-  // Test URLs comprehensively
+  // Test URLs
   const testAllUrls = async () => {
     setIsTestingUrls(true)
     const results = []
 
-    console.log("🔍 Testing all URLs comprehensively...")
+    console.log("🔍 Testing URLs...")
 
     for (const [index, url] of fileUrls.entries()) {
       const result = {
@@ -92,9 +89,9 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
         url,
         status: "Testing...",
         error: null,
-        responseHeaders: null,
         contentType: null,
         contentLength: null,
+        isWorkingFile: false,
       }
 
       try {
@@ -108,21 +105,17 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
 
         result.status = headResponse.status
         result.statusText = headResponse.statusText
-        result.responseHeaders = Object.fromEntries(headResponse.headers.entries())
         result.contentType = headResponse.headers.get("content-type")
         result.contentLength = headResponse.headers.get("content-length")
 
-        console.log(`URL ${index + 1} HEAD response:`, {
+        console.log(`URL ${index + 1} response:`, {
           status: headResponse.status,
-          statusText: headResponse.statusText,
           contentType: result.contentType,
           contentLength: result.contentLength,
         })
 
         if (headResponse.ok) {
-          console.log("✅ URL works with HEAD:", url)
-
-          // Test with GET request to make sure it's actually a file
+          // Test with GET to verify it's actually a file
           try {
             const getResponse = await fetch(url, { cache: "no-cache" })
             if (getResponse.ok) {
@@ -130,16 +123,11 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
               result.blobSize = blob.size
               result.blobType = blob.type
 
-              console.log(`URL ${index + 1} GET response:`, {
-                blobSize: blob.size,
-                blobType: blob.type,
-              })
-
               if (blob.size > 0 && !blob.type.includes("json") && !blob.type.includes("html")) {
                 result.isWorkingFile = true
                 if (!workingUrl) {
                   setWorkingUrl(url)
-                  console.log("🎉 Found first working file URL:", url)
+                  console.log("🎉 Found working file URL:", url)
                 }
               }
             }
@@ -158,12 +146,6 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
 
     setUrlTestResults(results)
     setIsTestingUrls(false)
-
-    console.log("=== URL Test Results Summary ===")
-    results.forEach((result) => {
-      console.log(`URL ${result.index}: ${result.status} - ${result.url}`)
-    })
-
     return results
   }
 
@@ -211,11 +193,11 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
           }
         }
       } else {
-        alert("No working download URL found. Please check the debug info below.")
+        alert("No working download URL found. The file URL stored in database might be incorrect.")
       }
     } catch (error) {
       console.error("Download error:", error)
-      alert("Download failed. Please check the debug info below.")
+      alert("Download failed. Please check the debug info.")
     } finally {
       setIsDownloading(false)
     }
@@ -230,7 +212,7 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
     if (workingUrl) {
       window.open(workingUrl, "_blank")
     } else {
-      alert("No working file URL found. Please check the debug info below to see what URLs were tested.")
+      alert("No working file URL found. The file URL in database might be incorrect.")
     }
   }
 
@@ -258,7 +240,7 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
             className={`flex items-center px-3 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors ${
               isTestingUrls ? "opacity-50 cursor-not-allowed" : ""
             }`}
-            title="Test all file URLs"
+            title="Test file URLs"
           >
             <RefreshCw className={`h-4 w-4 ${isTestingUrls ? "animate-spin" : ""}`} />
           </button>
@@ -287,24 +269,24 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
         </div>
       </div>
 
-      {/* Comprehensive Debug section */}
+      {/* Debug section */}
       <div className="px-6 pb-4">
-        <details className="text-sm" open={!workingUrl && urlTestResults.length > 0}>
+        <details className="text-sm" open={!workingUrl}>
           <summary className="cursor-pointer text-gray-600 hover:text-gray-800 font-medium">
-            🔧 Comprehensive Debug Info - File URL Testing Results
+            🔧 Debug Info - File URL Analysis
           </summary>
           <div className="mt-3 p-4 bg-gray-50 rounded-lg text-xs space-y-3">
             {/* File Info */}
             <div className="border-b pb-2">
               <h4 className="font-medium mb-1">File Information:</h4>
               <p>
-                <strong>API_URL:</strong> <code className="bg-white px-1 rounded">{API_URL}</code>
+                <strong>Database file field:</strong> <code className="bg-white px-1 rounded">{note.file}</code>
               </p>
               <p>
-                <strong>File path:</strong> <code className="bg-white px-1 rounded">{note.file}</code>
-              </p>
-              <p>
-                <strong>Clean path:</strong> <code className="bg-white px-1 rounded">{cleanFilePath}</code>
+                <strong>Is complete URL:</strong>{" "}
+                <span className={note.file.startsWith("http") ? "text-green-600" : "text-red-600"}>
+                  {note.file.startsWith("http") ? "Yes" : "No"}
+                </span>
               </p>
               <p>
                 <strong>Working URL:</strong>{" "}
@@ -327,7 +309,7 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
                     : "bg-blue-100 text-blue-800 hover:bg-blue-200"
                 }`}
               >
-                {isTestingUrls ? "🔄 Testing URLs..." : "🔄 Test All URLs Now"}
+                {isTestingUrls ? "🔄 Testing URLs..." : "🔄 Test URLs Now"}
               </button>
             </div>
 
@@ -335,7 +317,7 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
             {urlTestResults.length > 0 && (
               <div>
                 <h4 className="font-medium mb-2">URL Test Results:</h4>
-                <div className="space-y-2 max-h-60 overflow-y-auto">
+                <div className="space-y-2">
                   {urlTestResults.map((result) => (
                     <div
                       key={result.index}
@@ -359,10 +341,10 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
                           }`}
                         >
                           {result.isWorkingFile
-                            ? "✅ WORKING FILE"
+                            ? "✅ WORKING"
                             : result.status === 200
                               ? `⚠️ ${result.status}`
-                              : `❌ ${result.status}`}
+                              : `❌ ${result.status || "ERROR"}`}
                         </span>
                       </div>
 
@@ -380,9 +362,7 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
                       {result.contentType && (
                         <p className="text-xs text-gray-600">Content-Type: {result.contentType}</p>
                       )}
-
-                      {result.blobSize && <p className="text-xs text-gray-600">File Size: {result.blobSize} bytes</p>}
-
+                      {result.blobSize && <p className="text-xs text-gray-600">Size: {result.blobSize} bytes</p>}
                       {result.error && <p className="text-xs text-red-600">Error: {result.error}</p>}
                     </div>
                   ))}
@@ -390,17 +370,15 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
               </div>
             )}
 
-            {/* Instructions */}
+            {/* Backend Fix Instructions */}
             <div className="border-t pt-2 text-xs text-gray-600">
               <p>
-                <strong>Instructions:</strong>
+                <strong>Issue:</strong> The database stores complete URLs instead of relative paths.
               </p>
-              <ol className="list-decimal list-inside space-y-1 mt-1">
-                <li>Click "Test All URLs Now" to check which URLs work</li>
-                <li>Look for URLs marked "✅ WORKING FILE"</li>
-                <li>If no working URLs found, check your Django file serving configuration</li>
-                <li>You can click on any URL above to test it directly in browser</li>
-              </ol>
+              <p>
+                <strong>Backend Fix:</strong> Update Django to store relative paths like <code>notes/filename.pdf</code>{" "}
+                instead of complete URLs.
+              </p>
             </div>
           </div>
         </details>
