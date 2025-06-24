@@ -144,13 +144,6 @@ const Feedback = () => {
           </div>
         )}
 
-        {/* Debug Info */}
-        <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <p className="text-blue-800 text-sm">
-            <strong>API Endpoint:</strong> {API_URL}/api/feedback/
-          </p>
-        </div>
-
         {/* Feedback Form */}
         <div className="bg-white rounded-lg shadow-sm border p-6">
           <form onSubmit={handleSubmit} className="space-y-6">

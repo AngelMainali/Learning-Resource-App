@@ -24,14 +24,21 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
   const fileName = note.file.split("/").pop() || "document"
   const fileExtension = fileName.split(".").pop()?.toLowerCase()
 
-  // Try different URL patterns
+  // Clean the file path and create proper URLs
+  const cleanFilePath = note.file.startsWith("/") ? note.file : `/${note.file}`
+
+  // Try different URL patterns - FIXED URL construction
   const fileUrls = [
-    `${API_URL}${note.file}`, // Direct path
-    `${API_URL}/media/${note.file}`, // Media folder
+    `${API_URL}${cleanFilePath}`, // Direct path: https://api.angelmainali.com.np/media/notes/file.pdf
+    `${API_URL}/media${cleanFilePath}`, // Media folder: https://api.angelmainali.com.np/media/notes/file.pdf
     `${API_URL}/api/notes/${note.id}/file/`, // API endpoint
   ]
 
-  console.log("Trying file URLs:", fileUrls)
+  console.log("=== DocumentViewer Debug ===")
+  console.log("API_URL:", API_URL)
+  console.log("note.file:", note.file)
+  console.log("cleanFilePath:", cleanFilePath)
+  console.log("Generated URLs:", fileUrls)
 
   // File type info
   const getFileInfo = () => {
@@ -49,26 +56,38 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
     setIsDownloading(true)
 
     try {
+      console.log("Starting download process...")
+
       // Increment counter
-      await fetch(`${API_URL}/api/notes/${note.id}/increment-download/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-      }).then(async (res) => {
-        if (res.ok) {
-          const data = await res.json()
+      try {
+        const counterResponse = await fetch(`${API_URL}/api/notes/${note.id}/increment-download/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        })
+
+        if (counterResponse.ok) {
+          const data = await counterResponse.json()
           setDownloadCount(data.downloads)
           if (onDownloadCountUpdate) onDownloadCountUpdate(data.downloads)
+          console.log("Download counter updated:", data.downloads)
         }
-      })
+      } catch (counterError) {
+        console.warn("Failed to update counter:", counterError)
+      }
 
       // Try downloading from different URLs
       let downloadSuccess = false
 
-      for (const url of fileUrls) {
+      for (const [index, url] of fileUrls.entries()) {
         try {
+          console.log(`Trying download URL ${index + 1}:`, url)
+
           const response = await fetch(url)
+          console.log(`Response status for URL ${index + 1}:`, response.status)
+
           if (response.ok) {
             const blob = await response.blob()
+            console.log(`Blob size for URL ${index + 1}:`, blob.size, "Type:", blob.type)
 
             // Check if it's actually a file (not JSON error)
             if (blob.size > 0 && !blob.type.includes("json")) {
@@ -81,30 +100,62 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
               window.URL.revokeObjectURL(downloadUrl)
               document.body.removeChild(link)
               downloadSuccess = true
-              console.log("Download successful from:", url)
+              console.log("✅ Download successful from:", url)
               break
             }
           }
         } catch (err) {
-          console.log("Failed to download from:", url)
+          console.log(`❌ Failed to download from URL ${index + 1}:`, url, "Error:", err.message)
         }
       }
 
       if (!downloadSuccess) {
-        // Fallback: open in new tab
-        window.open(fileUrls[0], "_blank")
+        console.log("All download attempts failed, opening in new tab...")
+        // Test each URL to find working one
+        for (const url of fileUrls) {
+          try {
+            const testResponse = await fetch(url, { method: "HEAD" })
+            if (testResponse.ok) {
+              console.log("Opening working URL:", url)
+              window.open(url, "_blank")
+              break
+            }
+          } catch (e) {
+            console.log("URL test failed:", url)
+          }
+        }
       }
     } catch (error) {
       console.error("Download error:", error)
-      window.open(fileUrls[0], "_blank")
+      alert("Download failed. Please check the debug info below.")
     } finally {
       setIsDownloading(false)
     }
   }
 
-  // Handle Open/View
-  const handleOpen = () => {
-    // Try opening the first available URL
+  // Handle Open/View - Test URLs first
+  const handleOpen = async () => {
+    console.log("=== Testing URLs for viewing ===")
+
+    for (const [index, url] of fileUrls.entries()) {
+      try {
+        console.log(`Testing URL ${index + 1}:`, url)
+
+        // Test if URL is accessible
+        const response = await fetch(url, { method: "HEAD" })
+        console.log(`URL ${index + 1} status:`, response.status)
+
+        if (response.ok) {
+          console.log("✅ Opening working URL:", url)
+          window.open(url, "_blank")
+          return
+        }
+      } catch (error) {
+        console.log(`❌ URL ${index + 1} failed:`, error.message)
+      }
+    }
+
+    console.log("❌ All URLs failed, trying first URL anyway...")
     window.open(fileUrls[0], "_blank")
   }
 
@@ -143,6 +194,45 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
             Open
           </button>
         </div>
+      </div>
+
+      {/* Enhanced Debug section */}
+      <div className="px-6 pb-4">
+        <details className="text-sm">
+          <summary className="cursor-pointer text-gray-600 hover:text-gray-800 font-medium">
+            🔧 Debug Info - Click to see file URLs and test them
+          </summary>
+          <div className="mt-3 p-4 bg-gray-50 rounded-lg text-xs space-y-2">
+            <div className="grid grid-cols-1 gap-2">
+              <p>
+                <strong>API_URL:</strong> <code className="bg-white px-1 rounded">{API_URL}</code>
+              </p>
+              <p>
+                <strong>File path:</strong> <code className="bg-white px-1 rounded">{note.file}</code>
+              </p>
+              <p>
+                <strong>Clean path:</strong> <code className="bg-white px-1 rounded">{cleanFilePath}</code>
+              </p>
+            </div>
+
+            <div className="border-t pt-2">
+              <p className="font-medium mb-2">Generated URLs (click to test):</p>
+              {fileUrls.map((url, index) => (
+                <div key={index} className="flex items-center justify-between py-1">
+                  <span className="text-xs">URL {index + 1}:</span>
+                  <a
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800 underline text-xs break-all ml-2"
+                  >
+                    {url}
+                  </a>
+                </div>
+              ))}
+            </div>
+          </div>
+        </details>
       </div>
     </div>
   )
