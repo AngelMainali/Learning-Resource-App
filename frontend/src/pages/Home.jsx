@@ -262,7 +262,7 @@ const SemesterCard = ({ semester }) => {
 
   return (
     <Link
-      to={`/semester/${semester.number}`}
+      to={`/semester/${semester.id}`}
       className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 hover:shadow-lg transition-all duration-300 hover:-translate-y-2 group text-center cursor-pointer hover:border-blue-300 relative"
     >
       <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
