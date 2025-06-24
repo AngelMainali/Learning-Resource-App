@@ -64,7 +64,7 @@ const NoteCard = ({ note }) => {
           </div>
         </div>
 
-        <p className="note-description">{note.description}</p>
+  
 
         {note.chapter && (
           <div className="note-chapter">
@@ -91,7 +91,6 @@ const NoteCard = ({ note }) => {
           </div>
 
           <div className="note-stats">
-            <span className="downloads">📥 {note.downloads} downloads</span>
             <span className="date">📅 {formatDate(note.created_at)}</span>
           </div>
         </div>
