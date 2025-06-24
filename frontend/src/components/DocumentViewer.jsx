@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { Download, Eye, EyeOff, ExternalLink, AlertCircle } from "lucide-react"
+import { API_URL } from "../config"
 
 const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
   const [showViewer, setShowViewer] = useState(true)
@@ -24,11 +25,13 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
     )
   }
 
-  // File info
-  const fileUrl = `http://127.0.0.1:8000/api/notes/${note.id}/file/`
-  const downloadUrl = `http://127.0.0.1:8000/api/notes/${note.id}/download/`
+  // File info - FIXED: Using API_URL instead of localhost
+  const fileUrl = `${API_URL}/api/notes/${note.id}/file/`
+  const downloadUrl = `${API_URL}/api/notes/${note.id}/download/`
   const fileName = note.file.split("/").pop() || "document"
   const fileExtension = fileName.split(".").pop()?.toLowerCase()
+
+  console.log("DocumentViewer URLs:", { fileUrl, downloadUrl, API_URL })
 
   // File type detection
   const isPDF = fileExtension === "pdf"
@@ -59,16 +62,22 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
     setIsDownloading(true)
 
     try {
-      // First increment the counter
-      const response = await fetch(`http://127.0.0.1:8000/api/notes/${note.id}/increment-download/`, {
+      console.log("Starting download process for note:", note.id)
+
+      // First increment the counter - FIXED: Using API_URL
+      const response = await fetch(`${API_URL}/api/notes/${note.id}/increment-download/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
       })
 
+      console.log("Download counter response:", response.status)
+
       if (response.ok) {
         const data = await response.json()
+        console.log("Updated download count:", data.downloads)
+
         // Update the counter immediately in UI
         setDownloadCount(data.downloads)
 
@@ -76,18 +85,24 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
         if (onDownloadCountUpdate) {
           onDownloadCountUpdate(data.downloads)
         }
+      } else {
+        console.warn("Failed to update download counter:", response.status)
       }
 
       // Then start the download
+      console.log("Initiating file download from:", downloadUrl)
       const link = document.createElement("a")
       link.href = downloadUrl
       link.download = fileName
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
+
+      console.log("Download initiated successfully")
     } catch (error) {
-      console.error("Error:", error)
+      console.error("Download error:", error)
       // Still allow download even if counter fails
+      console.log("Fallback: Opening download URL in new tab")
       window.open(downloadUrl, "_blank")
     } finally {
       setIsDownloading(false)
@@ -156,21 +171,33 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
                   height="700px"
                   className="border-0"
                   title={`PDF - ${note.title}`}
-                  onError={() => setViewerError(true)}
+                  onError={() => {
+                    console.error("PDF viewer failed to load:", fileUrl)
+                    setViewerError(true)
+                  }}
                 />
                 {viewerError && (
                   <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
                     <div className="text-center p-8">
                       <AlertCircle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
                       <p className="text-gray-700 mb-4">PDF viewer failed to load.</p>
-                      <a
-                        href={`https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(fileUrl)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-800 underline"
-                      >
-                        Try PDF.js Viewer
-                      </a>
+                      <p className="text-sm text-gray-500 mb-4">URL: {fileUrl}</p>
+                      <div className="space-y-2">
+                        <a
+                          href={`https://mozilla.github.io/pdf.js/web/viewer.html?file=${encodeURIComponent(fileUrl)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="block text-blue-600 hover:text-blue-800 underline"
+                        >
+                          Try PDF.js Viewer
+                        </a>
+                        <button
+                          onClick={() => setViewerError(false)}
+                          className="block text-gray-600 hover:text-gray-800 underline mx-auto"
+                        >
+                          Retry
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -185,8 +212,13 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
                   alt={note.title}
                   className="max-w-full h-auto mx-auto rounded-lg shadow-md"
                   style={{ maxHeight: "700px" }}
-                  onError={() => setViewerError(true)}
+                  onError={(e) => {
+                    console.error("Image failed to load:", fileUrl)
+                    setViewerError(true)
+                    e.target.src = "/placeholder.svg?height=400&width=600"
+                  }}
                 />
+                {viewerError && <p className="text-sm text-gray-500 mt-2">Failed to load image from: {fileUrl}</p>}
               </div>
             )}
 
@@ -199,8 +231,17 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
                   height="500px"
                   className="border-0 bg-white"
                   title={`Text - ${note.title}`}
-                  onError={() => setViewerError(true)}
+                  onError={() => {
+                    console.error("Text viewer failed to load:", fileUrl)
+                    setViewerError(true)
+                  }}
                 />
+                {viewerError && (
+                  <div className="text-center p-4">
+                    <p className="text-gray-600">Failed to load text file.</p>
+                    <p className="text-sm text-gray-500">URL: {fileUrl}</p>
+                  </div>
+                )}
               </div>
             )}
 
@@ -211,12 +252,12 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
                 <h4 className="text-xl font-semibold text-gray-900 mb-2">{fileInfo.type}</h4>
                 <p className="text-gray-600 mb-6">Choose a viewer to open this document</p>
 
-                <div className="flex justify-center space-x-4">
+                <div className="flex flex-col sm:flex-row justify-center gap-4">
                   <a
                     href={`https://docs.google.com/gview?url=${encodeURIComponent(fileUrl)}&embedded=true`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                   >
                     <span className="mr-2">📖</span>
                     Google Docs Viewer
@@ -226,12 +267,14 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
                     href={`https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(fileUrl)}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    className="flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                   >
                     <span className="mr-2">🏢</span>
                     Microsoft Online
                   </a>
                 </div>
+
+                <p className="text-xs text-gray-500 mt-4">File URL: {fileUrl}</p>
               </div>
             )}
           </div>
@@ -245,11 +288,11 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
           <h4 className="text-xl font-semibold text-gray-900 mb-2">Download Required</h4>
           <p className="text-gray-600 mb-6">This {fileInfo.type} needs to be downloaded to view.</p>
 
-          <div className="flex justify-center space-x-4">
+          <div className="flex flex-col sm:flex-row justify-center gap-4">
             <button
               onClick={handleDirectDownload}
               disabled={isDownloading}
-              className={`flex items-center px-6 py-3 text-white rounded-lg transition-colors ${
+              className={`flex items-center justify-center px-6 py-3 text-white rounded-lg transition-colors ${
                 isDownloading ? "bg-gray-400 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"
               }`}
             >
@@ -261,12 +304,14 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
               href={fileUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              className="flex items-center justify-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
             >
               <ExternalLink className="h-5 w-5 mr-2" />
               Direct Link
             </a>
           </div>
+
+          <p className="text-xs text-gray-500 mt-4">File URL: {fileUrl}</p>
         </div>
       )}
     </div>

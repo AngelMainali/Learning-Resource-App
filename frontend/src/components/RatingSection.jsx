@@ -1,6 +1,7 @@
 "use client"
 
 import { useState } from "react"
+import { API_URL } from "../config"
 
 const RatingSection = ({ noteId, onRatingSubmit }) => {
   const [rating, setRating] = useState(0)
@@ -19,8 +20,12 @@ const RatingSection = ({ noteId, onRatingSubmit }) => {
     }
 
     setSubmitting(true)
+    setMessage("")
+
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/notes/${noteId}/ratings/`, {
+      console.log("Submitting rating to:", `${API_URL}/api/notes/${noteId}/ratings/`)
+
+      const response = await fetch(`${API_URL}/api/notes/${noteId}/ratings/`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -32,22 +37,34 @@ const RatingSection = ({ noteId, onRatingSubmit }) => {
         }),
       })
 
+      console.log("Rating response status:", response.status)
+
       if (response.ok) {
+        const data = await response.json()
+        console.log("Rating submitted successfully:", data)
+
         setMessage("Rating submitted successfully!")
         setRating(0)
         setAuthorName("")
         setAuthorEmail("")
         if (onRatingSubmit) onRatingSubmit()
       } else if (response.status === 400) {
-        setMessage("You have already rated this note")
+        const errorData = await response.json().catch(() => ({}))
+        setMessage(errorData.detail || "You have already rated this note")
       } else {
-        setMessage("Failed to submit rating")
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
     } catch (error) {
-      setMessage("Failed to submit rating")
+      console.error("Error submitting rating:", error)
+      setMessage("Failed to submit rating. Please try again.")
     } finally {
       setSubmitting(false)
     }
+  }
+
+  const handleRetry = () => {
+    setMessage("")
+    handleSubmit({ preventDefault: () => {} })
   }
 
   return (
@@ -69,6 +86,7 @@ const RatingSection = ({ noteId, onRatingSubmit }) => {
                 onClick={() => setRating(star)}
                 onMouseEnter={() => setHoverRating(star)}
                 onMouseLeave={() => setHoverRating(0)}
+                disabled={submitting}
               >
                 ★
               </button>
@@ -93,6 +111,7 @@ const RatingSection = ({ noteId, onRatingSubmit }) => {
               onChange={(e) => setAuthorName(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
+              disabled={submitting}
             />
           </div>
 
@@ -107,6 +126,7 @@ const RatingSection = ({ noteId, onRatingSubmit }) => {
               onChange={(e) => setAuthorEmail(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
+              disabled={submitting}
             />
           </div>
         </div>
@@ -129,6 +149,15 @@ const RatingSection = ({ noteId, onRatingSubmit }) => {
           }`}
         >
           {message}
+          {message.includes("Failed") && (
+            <button
+              onClick={handleRetry}
+              className="ml-2 text-red-600 hover:text-red-800 underline"
+              disabled={submitting}
+            >
+              Retry
+            </button>
+          )}
         </div>
       )}
     </div>

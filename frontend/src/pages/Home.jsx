@@ -18,14 +18,34 @@ const Home = () => {
 
   const fetchSemesters = async () => {
     try {
-      const response = await axios.get(`${API_URL}/api/semesters/`)
+      // Debug logging
+      console.log("API_URL from config:", API_URL)
+      console.log("Attempting to fetch from:", `${API_URL}/api/semesters/`)
+
+      const response = await axios.get(`${API_URL}/api/semesters/`, {
+        timeout: 15000, // 15 second timeout
+        headers: {
+          Accept: "application/json",
+          "Content-Type": "application/json",
+        },
+        // Add withCredentials if needed for CORS
+        withCredentials: false,
+      })
+
+      console.log("API Response status:", response.status)
+      console.log("API Response data:", response.data)
+
       const semestersData = response.data.results || response.data || []
+      console.log("Processed semesters data:", semestersData)
 
       const allSemesters = []
       for (let i = 1; i <= 8; i++) {
         const existingSemester = semestersData.find((sem) => sem.number === i)
         if (existingSemester) {
-          allSemesters.push(existingSemester)
+          allSemesters.push({
+            ...existingSemester,
+            is_placeholder: false,
+          })
         } else {
           allSemesters.push({
             id: `placeholder-${i}`,
@@ -38,12 +58,42 @@ const Home = () => {
         }
       }
 
+      console.log("Final semesters array:", allSemesters)
       setSemesters(allSemesters)
       setError("")
     } catch (error) {
-      console.error("Error fetching semesters:", error)
-      setError("Connection failed")
+      console.error("Detailed error information:")
+      console.error("Error message:", error.message)
+      console.error("Error code:", error.code)
+      console.error("Error response:", error.response)
 
+      if (error.response) {
+        // Server responded with error status
+        console.error("Response status:", error.response.status)
+        console.error("Response data:", error.response.data)
+        console.error("Response headers:", error.response.headers)
+
+        if (error.response.status === 0) {
+          setError("CORS Error: Backend not accessible from frontend domain")
+        } else if (error.response.status >= 500) {
+          setError(`Server Error (${error.response.status}): Backend server issue`)
+        } else if (error.response.status === 404) {
+          setError("API Endpoint not found - Check backend URL")
+        } else {
+          setError(`HTTP Error ${error.response.status}: ${error.response.statusText}`)
+        }
+      } else if (error.request) {
+        // Request was made but no response received
+        console.error("No response received:", error.request)
+        setError("Network Error: No response from backend server")
+      } else if (error.code === "ECONNABORTED") {
+        setError("Request Timeout: Backend server is too slow")
+      } else {
+        // Something else happened
+        setError(`Connection Error: ${error.message}`)
+      }
+
+      // Always show placeholder semesters on error
       const placeholderSemesters = []
       for (let i = 1; i <= 8; i++) {
         placeholderSemesters.push({
@@ -61,12 +111,20 @@ const Home = () => {
     }
   }
 
+  // Add a retry function
+  const retryConnection = () => {
+    setLoading(true)
+    setError("")
+    fetchSemesters()
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-gray-600">Loading semesters...</p>
+          <p className="text-sm text-gray-400 mt-2">Connecting to: {API_URL}</p>
         </div>
       </div>
     )
@@ -84,6 +142,10 @@ const Home = () => {
                 src={logoImage || "/placeholder.svg"}
                 alt="Engineer Sathi Logo"
                 className="h-24 w-24 mx-auto object-contain mb-4 rounded-lg shadow-lg"
+                onError={(e) => {
+                  console.log("Logo failed to load, using placeholder")
+                  e.target.src = "/placeholder.svg?height=96&width=96"
+                }}
               />
             </div>
             <h1 className="text-4xl md:text-6xl font-bold mb-6">Engineer Sathi</h1>
@@ -103,8 +165,6 @@ const Home = () => {
             </div>
           </div>
         </div>
-
-      
       </section>
 
       {/* About Engineer Sathi */}
@@ -138,11 +198,22 @@ const Home = () => {
         </div>
       </section>
 
-      {/* Error Message */}
+      {/* Enhanced Error Message */}
       {error && (
-        <section className="py-4 bg-yellow-50 border-l-4 border-yellow-400">
+        <section className="py-6 bg-red-50 border-l-4 border-red-400">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <p className="text-yellow-800">⚠️ {error}</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-red-800 font-medium">⚠️ {error}</p>
+                <p className="text-red-600 text-sm mt-1">API URL: {API_URL} | Check browser console for details</p>
+              </div>
+              <button
+                onClick={retryConnection}
+                className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+              >
+                Retry Connection
+              </button>
+            </div>
           </div>
         </section>
       )}
@@ -150,6 +221,12 @@ const Home = () => {
       {/* Semesters Grid */}
       <section className="py-16 bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Choose Your Semester</h2>
+            <p className="text-gray-600">
+              {error ? "Showing placeholder semesters (offline mode)" : "Select a semester to view subjects and notes"}
+            </p>
+          </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {semesters.map((semester) => (
               <SemesterCard key={semester.id} semester={semester} />
@@ -161,18 +238,24 @@ const Home = () => {
   )
 }
 
-// Simplified Semester Card Component
+// Enhanced Semester Card Component
 const SemesterCard = ({ semester }) => {
   const isPlaceholder = semester.is_placeholder
   const hasContent = semester.total_subjects > 0
 
   if (isPlaceholder && !hasContent) {
     return (
-      <div className="bg-white rounded-xl shadow-sm border-2 border-dashed border-gray-300 p-8 text-center opacity-60 cursor-not-allowed">
+      <div className="bg-white rounded-xl shadow-sm border-2 border-dashed border-gray-300 p-8 text-center opacity-60 cursor-not-allowed relative">
         <div className="w-20 h-20 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
           <span className="text-3xl font-bold text-gray-400">{semester.number}</span>
         </div>
         <h3 className="text-xl font-semibold text-gray-400">Semester {semester.number}</h3>
+        <p className="text-sm text-gray-400 mt-2">No content available</p>
+        <div className="absolute top-2 right-2">
+          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-600">
+            Empty
+          </span>
+        </div>
       </div>
     )
   }
@@ -180,7 +263,7 @@ const SemesterCard = ({ semester }) => {
   return (
     <Link
       to={`/semester/${semester.number}`}
-      className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 hover:shadow-lg transition-all duration-300 hover:-translate-y-2 group text-center cursor-pointer hover:border-blue-300"
+      className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 hover:shadow-lg transition-all duration-300 hover:-translate-y-2 group text-center cursor-pointer hover:border-blue-300 relative"
     >
       <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
         <span className="text-3xl font-bold text-white">{semester.number}</span>
@@ -190,9 +273,24 @@ const SemesterCard = ({ semester }) => {
         Semester {semester.number}
       </h3>
 
+      {hasContent && (
+        <div className="mt-2 text-sm text-gray-600">
+          <p>{semester.total_subjects} subjects</p>
+          <p>{semester.total_notes} notes</p>
+        </div>
+      )}
+
       <div className="mt-4 flex items-center justify-center text-blue-600 group-hover:text-blue-700">
         <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
       </div>
+
+      {hasContent && (
+        <div className="absolute top-2 right-2">
+          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-600">
+            Active
+          </span>
+        </div>
+      )}
     </Link>
   )
 }

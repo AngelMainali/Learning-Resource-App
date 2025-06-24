@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { ArrowLeft, Eye } from "lucide-react"
 import DocumentViewer from "../components/DocumentViewer"
+import { API_URL } from "../config"
 
 const NoteDetail = () => {
   const { id } = useParams()
@@ -18,14 +19,29 @@ const NoteDetail = () => {
 
   const fetchNote = async () => {
     try {
+      console.log("Fetching note from:", `${API_URL}/api/notes/${id}/`)
       setLoading(true)
-      const response = await fetch(`http://127.0.0.1:8000/api/notes/${id}/`)
+      setError(null)
+
+      const response = await fetch(`${API_URL}/api/notes/${id}/`)
+
+      console.log("Note fetch response status:", response.status)
+
       if (!response.ok) {
-        throw new Error("Note not found")
+        if (response.status === 404) {
+          throw new Error("Note not found")
+        } else if (response.status >= 500) {
+          throw new Error("Server error - please try again later")
+        } else {
+          throw new Error(`Failed to load note (${response.status})`)
+        }
       }
+
       const data = await response.json()
+      console.log("Note data received:", data)
       setNote(data)
     } catch (error) {
+      console.error("Error fetching note:", error)
       setError(error.message)
     } finally {
       setLoading(false)
@@ -34,9 +50,12 @@ const NoteDetail = () => {
 
   const handleDownload = async () => {
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/notes/${id}/download/`)
+      console.log("Starting download from:", `${API_URL}/api/notes/${id}/download/`)
+
+      const response = await fetch(`${API_URL}/api/notes/${id}/download/`)
+
       if (!response.ok) {
-        throw new Error("Download failed")
+        throw new Error(`Download failed (${response.status})`)
       }
 
       const blob = await response.blob()
@@ -48,7 +67,10 @@ const NoteDetail = () => {
       a.click()
       window.URL.revokeObjectURL(url)
       document.body.removeChild(a)
+
+      console.log("Download completed successfully")
     } catch (error) {
+      console.error("Download error:", error)
       alert("Download failed: " + error.message)
     }
   }
@@ -69,12 +91,17 @@ const NoteDetail = () => {
     }
   }
 
+  const handleRetry = () => {
+    fetchNote()
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading note...</p>
+          <p className="text-sm text-gray-400 mt-2">From: {API_URL}</p>
         </div>
       </div>
     )
@@ -83,17 +110,27 @@ const NoteDetail = () => {
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
+        <div className="text-center max-w-md mx-auto">
           <div className="text-red-500 text-6xl mb-4">❌</div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Note Not Found</h2>
-          <p className="text-gray-600 mb-6">{error}</p>
-          <button
-            onClick={() => navigate(-1)}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors mx-auto"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Go Back
-          </button>
+          <p className="text-gray-600 mb-4">{error}</p>
+          <p className="text-sm text-gray-400 mb-6">API: {API_URL}</p>
+
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <button
+              onClick={handleRetry}
+              className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              🔄 Retry
+            </button>
+            <button
+              onClick={() => navigate(-1)}
+              className="flex items-center justify-center px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Go Back
+            </button>
+          </div>
         </div>
       </div>
     )
