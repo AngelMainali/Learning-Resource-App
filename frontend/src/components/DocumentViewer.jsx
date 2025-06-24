@@ -262,24 +262,11 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
               <h3 className="text-xl font-semibold text-gray-900">{fileName}</h3>
               <div className="flex items-center space-x-4 mt-1">
                 <p className="text-sm text-gray-600 font-medium">{fileInfo.type}</p>
-                <p className="text-sm text-gray-500">📥 {downloadCount} downloads</p>
               </div>
             </div>
           </div>
 
           <div className="flex items-center space-x-3">
-            <button
-              onClick={testAllUrls}
-              disabled={isTestingUrls}
-              className={`flex items-center px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors ${
-                isTestingUrls ? "opacity-50 cursor-not-allowed" : ""
-              }`}
-              title="Test all possible URLs"
-            >
-              <RefreshCw className={`h-4 w-4 mr-2 ${isTestingUrls ? "animate-spin" : ""}`} />
-              Test URLs
-            </button>
-
             <button
               onClick={handleDownload}
               disabled={isDownloading}
