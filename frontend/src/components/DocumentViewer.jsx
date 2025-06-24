@@ -1,16 +1,20 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Download, ExternalLink } from "lucide-react"
+import { Download, ExternalLink, RefreshCw } from "lucide-react"
 import { API_URL } from "../config"
 
 const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
   const [downloadCount, setDownloadCount] = useState(note?.downloads || 0)
   const [isDownloading, setIsDownloading] = useState(false)
+  const [workingUrl, setWorkingUrl] = useState(null) // Cache working URL
+  const [isTestingUrls, setIsTestingUrls] = useState(false)
 
   useEffect(() => {
     setDownloadCount(note?.downloads || 0)
-  }, [note?.downloads])
+    // Reset working URL when note changes
+    setWorkingUrl(null)
+  }, [note?.downloads, note?.id])
 
   if (!note?.file) {
     return (
@@ -27,17 +31,16 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
   // Clean the file path and create proper URLs
   const cleanFilePath = note.file.startsWith("/") ? note.file : `/${note.file}`
 
-  // Try different URL patterns - FIXED URL construction
+  // Try different URL patterns
   const fileUrls = [
-    `${API_URL}${cleanFilePath}`, // Direct path: https://api.angelmainali.com.np/media/notes/file.pdf
-    `${API_URL}/media${cleanFilePath}`, // Media folder: https://api.angelmainali.com.np/media/notes/file.pdf
-    `${API_URL}/api/notes/${note.id}/file/`, // API endpoint
+    `${API_URL}${cleanFilePath}`,
+    `${API_URL}/media${cleanFilePath}`,
+    `${API_URL}/api/notes/${note.id}/file/`,
+    `${API_URL}/api/notes/${note.id}/serve/`, // Additional endpoint
   ]
 
   console.log("=== DocumentViewer Debug ===")
-  console.log("API_URL:", API_URL)
-  console.log("note.file:", note.file)
-  console.log("cleanFilePath:", cleanFilePath)
+  console.log("Working URL cached:", workingUrl)
   console.log("Generated URLs:", fileUrls)
 
   // File type info
@@ -50,6 +53,38 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
 
   const fileInfo = getFileInfo()
 
+  // Test URLs to find working one
+  const findWorkingUrl = async () => {
+    setIsTestingUrls(true)
+    console.log("🔍 Testing URLs to find working one...")
+
+    for (const [index, url] of fileUrls.entries()) {
+      try {
+        console.log(`Testing URL ${index + 1}:`, url)
+
+        const response = await fetch(url, {
+          method: "HEAD",
+          cache: "no-cache", // Prevent caching issues
+        })
+
+        console.log(`URL ${index + 1} status:`, response.status, response.statusText)
+
+        if (response.ok) {
+          console.log("✅ Found working URL:", url)
+          setWorkingUrl(url)
+          setIsTestingUrls(false)
+          return url
+        }
+      } catch (error) {
+        console.log(`❌ URL ${index + 1} failed:`, error.message)
+      }
+    }
+
+    console.log("❌ No working URL found")
+    setIsTestingUrls(false)
+    return null
+  }
+
   // Handle Download
   const handleDownload = async () => {
     if (isDownloading) return
@@ -58,7 +93,7 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
     try {
       console.log("Starting download process...")
 
-      // Increment counter
+      // Increment counter first
       try {
         const counterResponse = await fetch(`${API_URL}/api/notes/${note.id}/increment-download/`, {
           method: "POST",
@@ -75,21 +110,21 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
         console.warn("Failed to update counter:", counterError)
       }
 
-      // Try downloading from different URLs
-      let downloadSuccess = false
+      // Use cached working URL or find new one
+      let urlToUse = workingUrl
+      if (!urlToUse) {
+        urlToUse = await findWorkingUrl()
+      }
 
-      for (const [index, url] of fileUrls.entries()) {
+      if (urlToUse) {
         try {
-          console.log(`Trying download URL ${index + 1}:`, url)
-
-          const response = await fetch(url)
-          console.log(`Response status for URL ${index + 1}:`, response.status)
+          console.log("Downloading from cached/found URL:", urlToUse)
+          const response = await fetch(urlToUse, { cache: "no-cache" })
 
           if (response.ok) {
             const blob = await response.blob()
-            console.log(`Blob size for URL ${index + 1}:`, blob.size, "Type:", blob.type)
+            console.log("Blob size:", blob.size, "Type:", blob.type)
 
-            // Check if it's actually a file (not JSON error)
             if (blob.size > 0 && !blob.type.includes("json")) {
               const downloadUrl = window.URL.createObjectURL(blob)
               const link = document.createElement("a")
@@ -99,64 +134,79 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
               link.click()
               window.URL.revokeObjectURL(downloadUrl)
               document.body.removeChild(link)
-              downloadSuccess = true
-              console.log("✅ Download successful from:", url)
-              break
+              console.log("✅ Download successful")
+            } else {
+              throw new Error("Invalid file response")
             }
+          } else {
+            throw new Error(`HTTP ${response.status}`)
           }
-        } catch (err) {
-          console.log(`❌ Failed to download from URL ${index + 1}:`, url, "Error:", err.message)
-        }
-      }
+        } catch (downloadError) {
+          console.log("Cached URL failed, clearing cache and retrying...")
+          setWorkingUrl(null)
 
-      if (!downloadSuccess) {
-        console.log("All download attempts failed, opening in new tab...")
-        // Test each URL to find working one
-        for (const url of fileUrls) {
-          try {
-            const testResponse = await fetch(url, { method: "HEAD" })
-            if (testResponse.ok) {
-              console.log("Opening working URL:", url)
-              window.open(url, "_blank")
-              break
-            }
-          } catch (e) {
-            console.log("URL test failed:", url)
+          // Try to find working URL again
+          const newUrl = await findWorkingUrl()
+          if (newUrl) {
+            window.open(newUrl, "_blank")
+          } else {
+            alert("Unable to download file. Please try again or contact support.")
           }
         }
+      } else {
+        alert("Unable to access file. Please try again or contact support.")
       }
     } catch (error) {
       console.error("Download error:", error)
-      alert("Download failed. Please check the debug info below.")
+      alert("Download failed. Please try again.")
     } finally {
       setIsDownloading(false)
     }
   }
 
-  // Handle Open/View - Test URLs first
+  // Handle Open/View
   const handleOpen = async () => {
-    console.log("=== Testing URLs for viewing ===")
+    console.log("=== Opening file ===")
 
-    for (const [index, url] of fileUrls.entries()) {
+    // Use cached working URL if available
+    if (workingUrl) {
+      console.log("Using cached working URL:", workingUrl)
+
+      // Test if cached URL still works
       try {
-        console.log(`Testing URL ${index + 1}:`, url)
+        const testResponse = await fetch(workingUrl, {
+          method: "HEAD",
+          cache: "no-cache",
+        })
 
-        // Test if URL is accessible
-        const response = await fetch(url, { method: "HEAD" })
-        console.log(`URL ${index + 1} status:`, response.status)
-
-        if (response.ok) {
-          console.log("✅ Opening working URL:", url)
-          window.open(url, "_blank")
+        if (testResponse.ok) {
+          console.log("✅ Cached URL still works, opening...")
+          window.open(workingUrl, "_blank")
           return
+        } else {
+          console.log("❌ Cached URL no longer works, clearing cache...")
+          setWorkingUrl(null)
         }
       } catch (error) {
-        console.log(`❌ URL ${index + 1} failed:`, error.message)
+        console.log("❌ Cached URL test failed, clearing cache...")
+        setWorkingUrl(null)
       }
     }
 
-    console.log("❌ All URLs failed, trying first URL anyway...")
-    window.open(fileUrls[0], "_blank")
+    // Find working URL
+    const foundUrl = await findWorkingUrl()
+    if (foundUrl) {
+      console.log("✅ Opening newly found URL:", foundUrl)
+      window.open(foundUrl, "_blank")
+    } else {
+      alert("Unable to open file. The file may have been moved or deleted.")
+    }
+  }
+
+  // Refresh URLs (clear cache and test again)
+  const handleRefreshUrls = async () => {
+    setWorkingUrl(null)
+    await findWorkingUrl()
   }
 
   return (
@@ -170,11 +220,23 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
             <div className="flex items-center space-x-4 mt-1">
               <p className="text-sm text-gray-600 font-medium">{fileInfo.type}</p>
               <p className="text-sm text-gray-500">📥 {downloadCount} downloads</p>
+              {workingUrl && <p className="text-xs text-green-600">✅ URL Cached</p>}
             </div>
           </div>
         </div>
 
         <div className="flex items-center space-x-3">
+          <button
+            onClick={handleRefreshUrls}
+            disabled={isTestingUrls}
+            className={`flex items-center px-3 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors ${
+              isTestingUrls ? "opacity-50 cursor-not-allowed" : ""
+            }`}
+            title="Refresh file URLs"
+          >
+            <RefreshCw className={`h-4 w-4 ${isTestingUrls ? "animate-spin" : ""}`} />
+          </button>
+
           <button
             onClick={handleDownload}
             disabled={isDownloading}
@@ -188,51 +250,15 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
 
           <button
             onClick={handleOpen}
-            className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+            disabled={isTestingUrls}
+            className={`flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors ${
+              isTestingUrls ? "opacity-50 cursor-not-allowed" : ""
+            }`}
           >
             <ExternalLink className="h-5 w-5 mr-2" />
-            Open
+            {isTestingUrls ? "Testing..." : "Open"}
           </button>
         </div>
-      </div>
-
-      {/* Enhanced Debug section */}
-      <div className="px-6 pb-4">
-        <details className="text-sm">
-          <summary className="cursor-pointer text-gray-600 hover:text-gray-800 font-medium">
-            🔧 Debug Info - Click to see file URLs and test them
-          </summary>
-          <div className="mt-3 p-4 bg-gray-50 rounded-lg text-xs space-y-2">
-            <div className="grid grid-cols-1 gap-2">
-              <p>
-                <strong>API_URL:</strong> <code className="bg-white px-1 rounded">{API_URL}</code>
-              </p>
-              <p>
-                <strong>File path:</strong> <code className="bg-white px-1 rounded">{note.file}</code>
-              </p>
-              <p>
-                <strong>Clean path:</strong> <code className="bg-white px-1 rounded">{cleanFilePath}</code>
-              </p>
-            </div>
-
-            <div className="border-t pt-2">
-              <p className="font-medium mb-2">Generated URLs (click to test):</p>
-              {fileUrls.map((url, index) => (
-                <div key={index} className="flex items-center justify-between py-1">
-                  <span className="text-xs">URL {index + 1}:</span>
-                  <a
-                    href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-600 hover:text-blue-800 underline text-xs break-all ml-2"
-                  >
-                    {url}
-                  </a>
-                </div>
-              ))}
-            </div>
-          </div>
-        </details>
       </div>
     </div>
   )
