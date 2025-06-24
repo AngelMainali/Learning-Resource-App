@@ -30,40 +30,42 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
   const fileName = note.file.split("/").pop() || "document"
   const fileExtension = fileName.split(".").pop()?.toLowerCase()
 
-  // Handle both full URLs and relative paths
-  let fileUrls = []
-
+  // Extract file path from complete URL if needed
+  let filePath = note.file
   if (note.file.startsWith("http")) {
-    // If note.file is already a complete URL, use it directly
-    console.log("File is already a complete URL:", note.file)
-    fileUrls = [
-      note.file, // Use the complete URL as-is
-      note.file.replace("http://", "https://"), // Try HTTPS version
-    ]
-  } else {
-    // If note.file is a relative path, construct URLs
-    const cleanFilePath = note.file.startsWith("/") ? note.file : `/${note.file}`
-    const filePathWithoutSlash = note.file.startsWith("/") ? note.file.substring(1) : note.file
-
-    fileUrls = [
-      // Direct file paths
-      `${API_URL}${cleanFilePath}`,
-      `${API_URL}/${filePathWithoutSlash}`,
-
-      // Media folder variations
-      `${API_URL}/media${cleanFilePath}`,
-      `${API_URL}/media/${filePathWithoutSlash}`,
-
-      // API endpoints
-      `${API_URL}/api/notes/${note.id}/file/`,
-      `${API_URL}/api/notes/${note.id}/download/`,
-    ]
+    // Extract path after /media/ from the complete URL
+    const urlParts = note.file.split("/media/")
+    if (urlParts.length > 1) {
+      filePath = urlParts[1] // e.g., "notes/learning_c_by_examples_230508_201027_1.pdf"
+    }
   }
+
+  // Create comprehensive URL patterns based on your backend structure
+  const fileUrls = [
+    // API endpoints that should work with your Django backend
+    `${API_URL}/api/notes/${note.id}/file/`,
+    `${API_URL}/api/notes/${note.id}/download/`,
+    `${API_URL}/api/notes/${note.id}/serve/`,
+
+    // Direct media serving (if configured)
+    `${API_URL}/media/${filePath}`,
+    `${API_URL}/static/${filePath}`,
+
+    // Alternative API patterns
+    `${API_URL}/api/files/${note.id}/`,
+    `${API_URL}/api/media/${note.id}/`,
+
+    // Try the original URL as-is (in case it works)
+    note.file,
+
+    // Try without /media/ prefix
+    `${API_URL}/${filePath}`,
+  ]
 
   console.log("=== DocumentViewer Debug ===")
   console.log("API_URL:", API_URL)
   console.log("note.file:", note.file)
-  console.log("File is complete URL:", note.file.startsWith("http"))
+  console.log("extracted filePath:", filePath)
   console.log("Generated URLs:", fileUrls)
 
   // File type info
@@ -131,6 +133,7 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
                 blobType: blob.type,
               })
 
+              // Check if it's a valid file (not HTML error page or JSON)
               if (blob.size > 0 && !blob.type.includes("json") && !blob.type.includes("html")) {
                 result.isWorkingFile = true
                 if (!workingUrl) {
@@ -217,7 +220,7 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`)
         }
       } else {
-        alert("No working download URL found. Please check the debug info below.")
+        alert("File not accessible. Please contact admin to check file configuration.")
       }
     } catch (error) {
       console.error("Download error:", error)
@@ -239,7 +242,7 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
       console.log("Opening working URL:", workingUrl)
       window.open(workingUrl, "_blank")
     } else {
-      alert("No working file URL found. Please check the debug info below.")
+      alert("File not accessible. Please contact admin to check file configuration.")
     }
   }
 
@@ -254,8 +257,10 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
             <div className="flex items-center space-x-4 mt-1">
               <p className="text-sm text-gray-600 font-medium">{fileInfo.type}</p>
               <p className="text-sm text-gray-500">📥 {downloadCount} downloads</p>
-              {workingUrl && <p className="text-xs text-green-600">✅ Working URL Found</p>}
-              {!workingUrl && urlTestResults.length > 0 && <p className="text-xs text-red-600">❌ No Working URL</p>}
+              {workingUrl && <p className="text-xs text-green-600">✅ File Accessible</p>}
+              {!workingUrl && urlTestResults.length > 0 && (
+                <p className="text-xs text-red-600">❌ File Not Accessible</p>
+              )}
             </div>
           </div>
         </div>
@@ -267,7 +272,7 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
             className={`flex items-center px-3 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors ${
               isTestingUrls ? "opacity-50 cursor-not-allowed" : ""
             }`}
-            title="Test all file URLs"
+            title="Test file accessibility"
           >
             <RefreshCw className={`h-4 w-4 ${isTestingUrls ? "animate-spin" : ""}`} />
           </button>
@@ -296,70 +301,44 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
         </div>
       </div>
 
-      {/* Comprehensive Debug section */}
-      <div className="px-6 pb-4">
-        <details className="text-sm" open={!workingUrl}>
-          <summary className="cursor-pointer text-gray-600 hover:text-gray-800 font-medium">
-            🔧 Debug Info - File URL Testing Results
-          </summary>
-          <div className="mt-3 p-4 bg-gray-50 rounded-lg text-xs space-y-3">
-            {/* File Info */}
-            <div className="border-b pb-2">
-              <h4 className="font-medium mb-1">File Information:</h4>
-              <p>
-                <strong>Database file field:</strong> <code className="bg-white px-1 rounded">{note.file}</code>
-              </p>
-              <p>
-                <strong>Is complete URL:</strong>{" "}
-                <span className={note.file.startsWith("http") ? "text-green-600" : "text-red-600"}>
-                  {note.file.startsWith("http") ? "Yes" : "No"}
-                </span>
-              </p>
-              <p>
-                <strong>Working URL:</strong>{" "}
-                {workingUrl ? (
-                  <code className="bg-green-100 text-green-800 px-1 rounded">{workingUrl}</code>
-                ) : (
-                  <span className="text-red-600">None found</span>
-                )}
-              </p>
-            </div>
+      {/* Debug section - only show if no working URL found */}
+      {!workingUrl && urlTestResults.length > 0 && (
+        <div className="px-6 pb-4">
+          <details className="text-sm" open>
+            <summary className="cursor-pointer text-gray-600 hover:text-gray-800 font-medium">
+              🔧 File Access Debug Info
+            </summary>
+            <div className="mt-3 p-4 bg-gray-50 rounded-lg text-xs space-y-3">
+              {/* File Info */}
+              <div className="border-b pb-2">
+                <h4 className="font-medium mb-1">File Information:</h4>
+                <p>
+                  <strong>Original URL:</strong> <code className="bg-white px-1 rounded">{note.file}</code>
+                </p>
+                <p>
+                  <strong>Extracted path:</strong> <code className="bg-white px-1 rounded">{filePath}</code>
+                </p>
+              </div>
 
-            {/* Test Button */}
-            <div className="border-b pb-2">
-              <button
-                onClick={testAllUrls}
-                disabled={isTestingUrls}
-                className={`px-3 py-1 rounded text-xs font-medium ${
-                  isTestingUrls
-                    ? "bg-gray-200 text-gray-500 cursor-not-allowed"
-                    : "bg-blue-100 text-blue-800 hover:bg-blue-200"
-                }`}
-              >
-                {isTestingUrls ? "🔄 Testing URLs..." : "🔄 Test All URLs Now"}
-              </button>
-            </div>
-
-            {/* URL Test Results */}
-            {urlTestResults.length > 0 && (
+              {/* URL Test Results */}
               <div>
-                <h4 className="font-medium mb-2">URL Test Results:</h4>
-                <div className="space-y-2 max-h-60 overflow-y-auto">
+                <h4 className="font-medium mb-2">Tested URLs:</h4>
+                <div className="space-y-1 max-h-40 overflow-y-auto">
                   {urlTestResults.map((result) => (
                     <div
                       key={result.index}
-                      className={`p-2 rounded border ${
+                      className={`p-2 rounded text-xs ${
                         result.isWorkingFile
-                          ? "bg-green-50 border-green-200"
+                          ? "bg-green-50 border border-green-200"
                           : result.status === 200
-                            ? "bg-yellow-50 border-yellow-200"
-                            : "bg-red-50 border-red-200"
+                            ? "bg-yellow-50 border border-yellow-200"
+                            : "bg-red-50 border border-red-200"
                       }`}
                     >
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-medium">URL {result.index}:</span>
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">#{result.index}</span>
                         <span
-                          className={`px-2 py-1 rounded text-xs ${
+                          className={`px-1 py-0.5 rounded text-xs ${
                             result.isWorkingFile
                               ? "bg-green-200 text-green-800"
                               : result.status === 200
@@ -367,53 +346,25 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
                                 : "bg-red-200 text-red-800"
                           }`}
                         >
-                          {result.isWorkingFile
-                            ? "✅ WORKING FILE"
-                            : result.status === 200
-                              ? `⚠️ ${result.status}`
-                              : `❌ ${result.status || "ERROR"}`}
+                          {result.isWorkingFile ? "✅ WORKS" : `❌ ${result.status || "ERROR"}`}
                         </span>
                       </div>
-
-                      <p className="text-xs break-all mb-1">
-                        <a
-                          href={result.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 underline"
-                        >
-                          {result.url}
-                        </a>
-                      </p>
-
-                      {result.contentType && (
-                        <p className="text-xs text-gray-600">Content-Type: {result.contentType}</p>
-                      )}
-
-                      {result.blobSize && <p className="text-xs text-gray-600">File Size: {result.blobSize} bytes</p>}
-
-                      {result.error && <p className="text-xs text-red-600">Error: {result.error}</p>}
+                      <p className="text-xs break-all mt-1 text-gray-600">{result.url}</p>
                     </div>
                   ))}
                 </div>
               </div>
-            )}
 
-            {/* Instructions */}
-            <div className="border-t pt-2 text-xs text-gray-600">
-              <p>
-                <strong>Next Steps:</strong>
-              </p>
-              <ol className="list-decimal list-inside space-y-1 mt-1">
-                <li>Click "🔄 Test All URLs Now" to check which URLs work</li>
-                <li>Look for URLs marked "✅ WORKING FILE"</li>
-                <li>If no working URLs found, check your Django file serving configuration</li>
-                <li>You can click on any URL above to test it directly in browser</li>
-              </ol>
+              <div className="border-t pt-2 text-xs text-gray-600">
+                <p>
+                  <strong>Status:</strong> No accessible file URLs found. Please contact admin to check file serving
+                  configuration.
+                </p>
+              </div>
             </div>
-          </div>
-        </details>
-      </div>
+          </details>
+        </div>
+      )}
     </div>
   )
 }
