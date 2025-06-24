@@ -15,7 +15,8 @@ DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
 #ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
 
-ALLOWED_HOSTS=['learning-resource-app-rbum.onrender.com',"api.angelmainali.com.np",'learning-resource-app-baea-gpm1gw0eq.vercel.app']
+ALLOWED_HOSTS=['learning-resource-app-rbum.onrender.com','api.angelmainali.com.np','angelmainali.com.np','learning-resource-app-baea-gpm1gw0eq.vercel.app']
+
 
 # Application definition
 INSTALLED_APPS = [
@@ -121,9 +122,11 @@ REST_FRAMEWORK = {
 
 # CORS settings for frontend
 CORS_ALLOWED_ORIGINS = [
-    'https://learning-resource-app-baea-gpm1gw0eq.vercel.app',
-    'https://www.angelmainali.com.np'
+    'https://angelmainali.com.np',
+    'https://www.angelmainali.com.np',
+    'https://learning-resource-app-baea-gpm1gw0eq.vercel.app'
 ]
+
 
 CORS_ALLOW_CREDENTIALS = False
 #CORS_ALLOW_ALL_ORIGINS = True  # Only for development
@@ -131,9 +134,14 @@ CORS_ALLOW_CREDENTIALS = False
 # CSRF settings - Disable CSRF for API endpoints
 CSRF_TRUSTED_ORIGINS = [
     "https://learning-resource-app-rbum.onrender.com",
+    "https://api.angelmainali.com.np",
+    "https://angelmainali.com.np",
     "https://www.angelmainali.com.np",
     "https://learning-resource-app-baea-gpm1gw0eq.vercel.app"
 ]
+
+
+
 
 # These should be True in production
 CSRF_COOKIE_SECURE = True
@@ -158,7 +166,7 @@ CORS_ALLOW_HEADERS = [
     'user-agent',
     'x-csrftoken',
     'x-requested-with',
-    'range',  # Add this line
+    'range', 
 ]
 
 # Add these new settings

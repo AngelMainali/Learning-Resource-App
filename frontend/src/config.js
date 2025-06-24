@@ -4,3 +4,5 @@ export const SITE_NAME = import.meta.env.VITE_SITE_NAME || "Engineer Sathi"
 
 // Add debug logging
 console.log("API_URL:", API_URL)
+console.log("Environment VITE_API_URL:", import.meta.env.VITE_API_URL)
+
