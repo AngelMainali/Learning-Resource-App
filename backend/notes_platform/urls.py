@@ -23,10 +23,7 @@ urlpatterns = [
      path('', api_root, name='api_root'),
 ]
 
-# Serve media files during development
-if settings.DEBUG:
+
+if settings.DEBUG or True:  
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-else:
-    # For production, serve media files
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
