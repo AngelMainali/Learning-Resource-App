@@ -205,7 +205,6 @@ const Home = () => {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-red-800 font-medium">⚠️ {error}</p>
-                <p className="text-red-600 text-sm mt-1">API URL: {API_URL} | Check browser console for details</p>
               </div>
               <button
                 onClick={retryConnection}
@@ -273,24 +272,9 @@ const SemesterCard = ({ semester }) => {
         Semester {semester.number}
       </h3>
 
-      {hasContent && (
-        <div className="mt-2 text-sm text-gray-600">
-          <p>{semester.total_subjects} subjects</p>
-          <p>{semester.total_notes} notes</p>
-        </div>
-      )}
-
       <div className="mt-4 flex items-center justify-center text-blue-600 group-hover:text-blue-700">
         <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
       </div>
-
-      {hasContent && (
-        <div className="absolute top-2 right-2">
-          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-600">
-            Active
-          </span>
-        </div>
-      )}
     </Link>
   )
 }

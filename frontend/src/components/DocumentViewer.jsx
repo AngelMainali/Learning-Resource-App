@@ -144,28 +144,6 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
           </button>
         </div>
       </div>
-
-      {/* Debug section - remove this after testing */}
-      <div className="px-6 pb-4">
-        <details className="text-sm">
-          <summary className="cursor-pointer text-gray-600 hover:text-gray-800">
-            🔧 Debug Info (Click to see file URLs)
-          </summary>
-          <div className="mt-2 p-3 bg-gray-50 rounded text-xs space-y-1">
-            <p>
-              <strong>File path:</strong> {note.file}
-            </p>
-            {fileUrls.map((url, index) => (
-              <p key={index}>
-                <strong>URL {index + 1}:</strong>{" "}
-                <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
-                  {url}
-                </a>
-              </p>
-            ))}
-          </div>
-        </details>
-      </div>
     </div>
   )
 }
