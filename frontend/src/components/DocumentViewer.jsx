@@ -263,15 +263,6 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
               <div className="flex items-center space-x-4 mt-1">
                 <p className="text-sm text-gray-600 font-medium">{fileInfo.type}</p>
                 <p className="text-sm text-gray-500">📥 {downloadCount} downloads</p>
-                {fileAccessible && (
-                  <span className="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">✅ Available</span>
-                )}
-                {!fileAccessible && !isTestingUrls && (
-                  <span className="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">❌ Checking...</span>
-                )}
-                {isTestingUrls && (
-                  <span className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">🔄 Testing...</span>
-                )}
               </div>
             </div>
           </div>
@@ -299,88 +290,11 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
               <Download className="h-5 w-5 mr-2" />
               {isDownloading ? "Downloading..." : "Download"}
             </button>
-
-            <button
-              onClick={handleOpen}
-              className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-            >
-              <ExternalLink className="h-5 w-5 mr-2" />
-              Open
-            </button>
           </div>
         </div>
 
-        {/* Quick Status */}
-        {!fileAccessible && !isTestingUrls && (
-          <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-            <p className="text-sm text-yellow-800">
-              <strong>File access check in progress...</strong> If this persists, click "Test URLs" for detailed
-              diagnostics.
-            </p>
-          </div>
-        )}
       </div>
 
-      {/* Detailed Debug Info - Only show when testing or if no working URL found */}
-      {(urlTestResults.length > 0 || (!fileAccessible && !isTestingUrls)) && (
-        <div className="px-6 pb-6 border-t">
-          <details className="text-sm">
-            <summary className="cursor-pointer text-gray-600 hover:text-gray-800 font-medium py-2">
-              🔧 Diagnostic Information
-            </summary>
-            <div className="mt-2 p-4 bg-gray-50 rounded-lg text-xs space-y-3">
-              <div>
-                <h4 className="font-medium mb-2">File Information:</h4>
-                <p>
-                  <strong>Note ID:</strong> {note.id}
-                </p>
-                <p>
-                  <strong>Stored URL:</strong> <code className="bg-white px-1 rounded">{note.file}</code>
-                </p>
-                <p>
-                  <strong>Working URL:</strong>{" "}
-                  {workingUrl ? <code className="bg-green-100 px-1 rounded">{workingUrl}</code> : "None found"}
-                </p>
-              </div>
-
-              {urlTestResults.length > 0 && (
-                <div>
-                  <h4 className="font-medium mb-2">URL Test Results:</h4>
-                  <div className="space-y-1 max-h-32 overflow-y-auto">
-                    {urlTestResults.map((result) => (
-                      <div
-                        key={result.index}
-                        className={`p-2 rounded text-xs ${result.isWorking ? "bg-green-50" : "bg-red-50"}`}
-                      >
-                        <div className="flex justify-between items-center">
-                          <span>#{result.index}</span>
-                          <span
-                            className={`px-1 rounded ${result.isWorking ? "bg-green-200 text-green-800" : "bg-red-200 text-red-800"}`}
-                          >
-                            {result.isWorking ? "✅ WORKS" : `❌ ${result.status}`}
-                          </span>
-                        </div>
-                        <p className="break-all mt-1 text-gray-600">{result.url}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div className="text-xs text-gray-600 border-t pt-2">
-                <p>
-                  <strong>Troubleshooting:</strong>
-                </p>
-                <ul className="list-disc list-inside space-y-1 mt-1">
-                  <li>Click "Test URLs" to check all possible file locations</li>
-                  <li>Try the Download/Open buttons - they may work even if tests fail</li>
-                  <li>If all URLs fail, the Django file serving may need configuration</li>
-                </ul>
-              </div>
-            </div>
-          </details>
-        </div>
-      )}
     </div>
   )
 }
