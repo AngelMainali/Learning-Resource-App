@@ -1,14 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Download, Eye, EyeOff, ExternalLink, AlertCircle } from "lucide-react"
+import { Download, ExternalLink, AlertCircle } from "lucide-react"
 import { API_URL } from "../config"
 
 const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
-  const [showViewer, setShowViewer] = useState(true)
-  const [viewerError, setViewerError] = useState(false)
   const [downloadCount, setDownloadCount] = useState(note?.downloads || 0)
   const [isDownloading, setIsDownloading] = useState(false)
+  const [viewerError, setViewerError] = useState(false)
 
   useEffect(() => {
     setDownloadCount(note?.downloads || 0)
@@ -27,41 +26,35 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
   const fileName = note.file.split("/").pop() || "document"
   const fileExtension = fileName.split(".").pop()?.toLowerCase()
 
-  // File URLs
-  const fileViewUrl = `${API_URL}${note.file}` // For viewing in browser
-  const downloadUrl = `${API_URL}/api/notes/${note.id}/download/` // For downloading
+  // File URLs - try direct file path first
+  const directFileUrl = `${API_URL}${note.file}`
+  const downloadApiUrl = `${API_URL}/api/notes/${note.id}/download/`
+
+  console.log("File URLs:", { directFileUrl, downloadApiUrl, noteFile: note.file })
 
   // File type detection
   const isPDF = fileExtension === "pdf"
-  const isWord = ["doc", "docx"].includes(fileExtension)
-  const isPowerPoint = ["ppt", "pptx"].includes(fileExtension)
-  const isExcel = ["xls", "xlsx"].includes(fileExtension)
   const isImage = ["jpg", "jpeg", "png", "gif", "webp", "bmp"].includes(fileExtension)
-  const isText = ["txt", "csv", "md"].includes(fileExtension)
-
-  const isViewable = isPDF || isWord || isPowerPoint || isExcel || isImage || isText
 
   // File type info
   const getFileInfo = () => {
     if (isPDF) return { icon: "📄", type: "PDF Document", color: "text-red-600" }
-    if (isWord) return { icon: "📝", type: "Word Document", color: "text-blue-600" }
-    if (isPowerPoint) return { icon: "📊", type: "PowerPoint", color: "text-orange-600" }
-    if (isExcel) return { icon: "📈", type: "Excel Spreadsheet", color: "text-green-600" }
     if (isImage) return { icon: "🖼️", type: "Image", color: "text-purple-600" }
-    if (isText) return { icon: "📃", type: "Text File", color: "text-gray-600" }
     return { icon: "📁", type: "File", color: "text-gray-500" }
   }
 
   const fileInfo = getFileInfo()
 
-  // Handle Download (downloads the file)
+  // Handle Download - increment counter then download
   const handleDownload = async () => {
     if (isDownloading) return
 
     setIsDownloading(true)
 
     try {
-      // Increment download counter
+      console.log("Starting download process...")
+
+      // First increment the counter
       const counterResponse = await fetch(`${API_URL}/api/notes/${note.id}/increment-download/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -69,37 +62,38 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
 
       if (counterResponse.ok) {
         const data = await counterResponse.json()
+        console.log("Counter updated:", data.downloads)
         setDownloadCount(data.downloads)
         if (onDownloadCountUpdate) {
           onDownloadCountUpdate(data.downloads)
         }
       }
 
-      // Download the file
-      const response = await fetch(downloadUrl)
-      if (response.ok) {
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const link = document.createElement("a")
-        link.href = url
-        link.download = fileName
-        document.body.appendChild(link)
-        link.click()
-        window.URL.revokeObjectURL(url)
-        document.body.removeChild(link)
-      }
+      // Then download the file using direct link method
+      console.log("Downloading from:", directFileUrl)
+
+      // Create a temporary link and click it to trigger download
+      const link = document.createElement("a")
+      link.href = directFileUrl
+      link.download = fileName
+      link.target = "_blank"
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+
+      console.log("Download initiated")
     } catch (error) {
       console.error("Download error:", error)
-      // Fallback: open in new tab
-      window.open(downloadUrl, "_blank")
+      alert("Download failed. Please try the 'Open' button to view the file.")
     } finally {
       setIsDownloading(false)
     }
   }
 
-  // Handle Open (views the file in browser)
+  // Handle Open - just open in new tab
   const handleOpen = () => {
-    window.open(fileViewUrl, "_blank")
+    console.log("Opening file:", directFileUrl)
+    window.open(directFileUrl, "_blank")
   }
 
   return (
@@ -118,113 +112,46 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
         </div>
 
         <div className="flex items-center space-x-2">
-          {isViewable && (
-            <button
-              onClick={() => setShowViewer(!showViewer)}
-              className="flex items-center px-3 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              {showViewer ? <EyeOff className="h-4 w-4 mr-1" /> : <Eye className="h-4 w-4 mr-1" />}
-              {showViewer ? "Hide" : "Show"}
-            </button>
-          )}
-
           <button
             onClick={handleDownload}
             disabled={isDownloading}
-            className={`flex items-center px-3 py-2 text-white rounded-lg transition-colors ${
+            className={`flex items-center px-4 py-2 text-white rounded-lg transition-colors ${
               isDownloading ? "bg-gray-400 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"
             }`}
           >
-            <Download className="h-4 w-4 mr-1" />
+            <Download className="h-4 w-4 mr-2" />
             {isDownloading ? "Downloading..." : "Download"}
           </button>
 
           <button
             onClick={handleOpen}
-            className="flex items-center px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
-            <ExternalLink className="h-4 w-4 mr-1" />
+            <ExternalLink className="h-4 w-4 mr-2" />
             Open
           </button>
         </div>
       </div>
 
-      {/* Document Viewer */}
-      {showViewer && isViewable && (
+      {/* Simple PDF Viewer - No overlay, direct embed */}
+      {isPDF && (
         <div className="p-4">
           <div className="border rounded-lg overflow-hidden bg-white">
-            {/* PDF Viewer */}
-            {isPDF && (
-              <iframe
-                src={fileViewUrl}
-                width="100%"
-                height="700px"
-                className="border-0"
-                title={`PDF - ${note.title}`}
-                onError={() => setViewerError(true)}
-              />
-            )}
-
-            {/* Image Viewer */}
-            {isImage && (
-              <div className="text-center p-6">
-                <img
-                  src={fileViewUrl || "/placeholder.svg"}
-                  alt={note.title}
-                  className="max-w-full h-auto mx-auto rounded-lg shadow-md"
-                  style={{ maxHeight: "700px" }}
-                  onError={() => setViewerError(true)}
-                />
-              </div>
-            )}
-
-            {/* Text Viewer */}
-            {isText && (
-              <iframe
-                src={fileViewUrl}
-                width="100%"
-                height="500px"
-                className="border-0 bg-white"
-                title={`Text - ${note.title}`}
-                onError={() => setViewerError(true)}
-              />
-            )}
-
-            {/* Office Documents */}
-            {(isWord || isPowerPoint || isExcel) && (
-              <div className="p-8 text-center bg-blue-50">
-                <div className="text-6xl mb-4">{fileInfo.icon}</div>
-                <h4 className="text-xl font-semibold text-gray-900 mb-2">{fileInfo.type}</h4>
-                <p className="text-gray-600 mb-6">Choose a viewer to open this document</p>
-
-                <div className="flex flex-col sm:flex-row justify-center gap-4">
-                  <a
-                    href={`https://docs.google.com/gview?url=${encodeURIComponent(fileViewUrl)}&embedded=true`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    <span className="mr-2">📖</span>
-                    Google Docs Viewer
-                  </a>
-
-                  <a
-                    href={`https://view.officeapps.live.com/op/view.aspx?src=${encodeURIComponent(fileViewUrl)}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-                  >
-                    <span className="mr-2">🏢</span>
-                    Microsoft Online
-                  </a>
-                </div>
-              </div>
-            )}
-
+            <iframe
+              src={directFileUrl}
+              width="100%"
+              height="600px"
+              className="border-0"
+              title={`PDF - ${note.title}`}
+              onError={() => {
+                console.error("PDF failed to load:", directFileUrl)
+                setViewerError(true)
+              }}
+            />
             {viewerError && (
               <div className="p-8 text-center">
                 <AlertCircle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
-                <p className="text-gray-700 mb-4">Failed to load file viewer.</p>
+                <p className="text-gray-700 mb-4">PDF failed to load in viewer.</p>
                 <button
                   onClick={handleOpen}
                   className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -237,35 +164,50 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
         </div>
       )}
 
-      {/* Non-viewable files */}
-      {!isViewable && (
-        <div className="p-8 text-center">
-          <div className="text-6xl mb-4">{fileInfo.icon}</div>
-          <h4 className="text-xl font-semibold text-gray-900 mb-2">Download Required</h4>
-          <p className="text-gray-600 mb-6">This {fileInfo.type} needs to be downloaded to view.</p>
-
-          <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <button
-              onClick={handleDownload}
-              disabled={isDownloading}
-              className={`flex items-center justify-center px-6 py-3 text-white rounded-lg transition-colors ${
-                isDownloading ? "bg-gray-400 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"
-              }`}
-            >
-              <Download className="h-5 w-5 mr-2" />
-              {isDownloading ? "Downloading..." : "Download File"}
-            </button>
-
-            <button
-              onClick={handleOpen}
-              className="flex items-center justify-center px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              <ExternalLink className="h-5 w-5 mr-2" />
-              Open in Browser
-            </button>
+      {/* Simple Image Viewer */}
+      {isImage && (
+        <div className="p-4">
+          <div className="text-center">
+            <img
+              src={directFileUrl || "/placeholder.svg"}
+              alt={note.title}
+              className="max-w-full h-auto mx-auto rounded-lg shadow-md"
+              style={{ maxHeight: "600px" }}
+              onError={(e) => {
+                console.error("Image failed to load:", directFileUrl)
+                e.target.src = "/placeholder.svg?height=400&width=600"
+              }}
+            />
           </div>
         </div>
       )}
+
+      {/* Non-PDF/Image files */}
+      {!isPDF && !isImage && (
+        <div className="p-8 text-center">
+          <div className="text-6xl mb-4">{fileInfo.icon}</div>
+          <h4 className="text-xl font-semibold text-gray-900 mb-2">{fileInfo.type}</h4>
+          <p className="text-gray-600 mb-6">Click Download to save or Open to view in browser.</p>
+        </div>
+      )}
+
+      {/* Debug info */}
+      <div className="p-2 bg-gray-50 border-t text-xs text-gray-500">
+        <details>
+          <summary className="cursor-pointer">Debug Info</summary>
+          <div className="mt-2">
+            <p>
+              <strong>File:</strong> {note.file}
+            </p>
+            <p>
+              <strong>Direct URL:</strong> {directFileUrl}
+            </p>
+            <p>
+              <strong>Download API:</strong> {downloadApiUrl}
+            </p>
+          </div>
+        </details>
+      </div>
     </div>
   )
 }
