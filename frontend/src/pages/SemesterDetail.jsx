@@ -142,13 +142,6 @@ const SemesterDetail = () => {
 
             <div className="flex-1">
               <h1 className="text-3xl font-bold text-gray-900 mb-2">Semester {semester.number}</h1>
-              <p className="text-gray-600 mb-4">{semester.description || "No description available"}</p>
-
-              {/* Debug info */}
-              <div className="text-xs text-gray-500">
-                <p>Semester ID: {semester.id}</p>
-                <p>Subjects count: {semester.subjects ? semester.subjects.length : "undefined"}</p>
-              </div>
             </div>
           </div>
         </div>
@@ -189,12 +182,10 @@ const SemesterDetail = () => {
                   <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
                 </div>
 
-                <p className="text-gray-600 text-sm mb-4 line-clamp-2">{subject.description || "No description"}</p>
 
                 <div className="flex items-center justify-between text-sm text-gray-500">
                   <div className="flex items-center">
                     <FileText className="h-4 w-4 mr-1" />
-                    {subject.total_notes || 0} Notes
                   </div>
                   <div className="text-xs text-gray-400">Click to explore →</div>
                 </div>

@@ -105,33 +105,6 @@ const SubjectDetail = () => {
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Connection Error</h1>
           <p className="text-gray-600 mb-4">{error}</p>
 
-          {/* Debug Information */}
-          <div className="bg-gray-100 p-4 rounded-lg text-left text-xs mb-4">
-            <h3 className="font-bold mb-2">Debug Information:</h3>
-            <p>
-              <strong>Subject ID:</strong> {id}
-            </p>
-            <p>
-              <strong>API URL:</strong> {API_URL}
-            </p>
-            <p>
-              <strong>Subject URL:</strong> {API_URL}/api/subjects/{id}/
-            </p>
-            <p>
-              <strong>Notes URL:</strong> {API_URL}/api/subjects/{id}/notes/
-            </p>
-            {debugInfo.subjectError && (
-              <p>
-                <strong>Subject Error:</strong> {debugInfo.subjectError}
-              </p>
-            )}
-            {debugInfo.notesError && (
-              <p>
-                <strong>Notes Error:</strong> {debugInfo.notesError}
-              </p>
-            )}
-          </div>
-
           <div className="space-y-2">
             <button onClick={retryFetch} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg mr-2">
               <RefreshCw className="h-4 w-4 inline mr-1" />
@@ -153,8 +126,6 @@ const SubjectDetail = () => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading subject details...</p>
-          <p className="text-xs text-gray-500 mt-2">Subject ID: {id}</p>
-          <p className="text-xs text-gray-500">API: {API_URL}</p>
         </div>
       </div>
     )
@@ -166,7 +137,6 @@ const SubjectDetail = () => {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900">Subject not found</h1>
-          <p className="text-gray-600 mt-2">Subject ID: {id}</p>
           <Link to="/" className="text-blue-600 hover:text-blue-700 mt-4 inline-block">
             ← Back to Home
           </Link>
@@ -213,10 +183,6 @@ const SubjectDetail = () => {
 
           <div className="text-center">
             <h1 className="text-3xl font-bold text-gray-900 mb-3">{subject.name}</h1>
-            <p className="text-gray-600">{subject.description}</p>
-            <div className="mt-2 text-sm text-gray-500">
-              Semester {subject.semester_number || subject.semester?.number || 1} | Subject ID: {subject.id}
-            </div>
           </div>
         </div>
       </div>
@@ -238,27 +204,6 @@ const SubjectDetail = () => {
             <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No notes available</h3>
             <p className="text-gray-600 mb-4">Notes for this subject will be added soon...</p>
-
-            {/* Debug info for empty notes */}
-            <div className="bg-gray-100 p-4 rounded-lg text-xs max-w-md mx-auto">
-              <p>
-                <strong>Subject ID:</strong> {id}
-              </p>
-              <p>
-                <strong>Notes API:</strong> {API_URL}/api/subjects/{id}/notes/
-              </p>
-              <p>
-                <strong>Notes Count:</strong> {debugInfo.notesCount || 0}
-              </p>
-              <p>
-                <strong>Response Type:</strong> {debugInfo.notesStructure}
-              </p>
-              {debugInfo.notesError && (
-                <p>
-                  <strong>Error:</strong> {debugInfo.notesError}
-                </p>
-              )}
-            </div>
 
             <button onClick={retryFetch} className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">
               <RefreshCw className="h-4 w-4 inline mr-1" />
