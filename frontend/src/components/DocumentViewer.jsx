@@ -1,13 +1,12 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Download, ExternalLink, AlertCircle } from "lucide-react"
+import { Download, ExternalLink } from "lucide-react"
 import { API_URL } from "../config"
 
 const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
   const [downloadCount, setDownloadCount] = useState(note?.downloads || 0)
   const [isDownloading, setIsDownloading] = useState(false)
-  const [viewerError, setViewerError] = useState(false)
 
   useEffect(() => {
     setDownloadCount(note?.downloads || 0)
@@ -15,9 +14,8 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
 
   if (!note?.file) {
     return (
-      <div className="bg-white rounded-lg shadow-sm border p-8 text-center">
-        <AlertCircle className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-xl font-semibold text-gray-900 mb-2">No File Available</h3>
+      <div className="bg-white rounded-lg shadow-sm border p-6 text-center">
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">No File Available</h3>
         <p className="text-gray-600">This note doesn't have any file attached.</p>
       </div>
     )
@@ -26,185 +24,145 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
   const fileName = note.file.split("/").pop() || "document"
   const fileExtension = fileName.split(".").pop()?.toLowerCase()
 
-  // File URLs - try direct file path first
-  const directFileUrl = `${API_URL}${note.file}`
-  const downloadApiUrl = `${API_URL}/api/notes/${note.id}/download/`
+  // Try different URL patterns
+  const fileUrls = [
+    `${API_URL}${note.file}`, // Direct path
+    `${API_URL}/media/${note.file}`, // Media folder
+    `${API_URL}/api/notes/${note.id}/file/`, // API endpoint
+  ]
 
-  console.log("File URLs:", { directFileUrl, downloadApiUrl, noteFile: note.file })
-
-  // File type detection
-  const isPDF = fileExtension === "pdf"
-  const isImage = ["jpg", "jpeg", "png", "gif", "webp", "bmp"].includes(fileExtension)
+  console.log("Trying file URLs:", fileUrls)
 
   // File type info
   const getFileInfo = () => {
-    if (isPDF) return { icon: "📄", type: "PDF Document", color: "text-red-600" }
-    if (isImage) return { icon: "🖼️", type: "Image", color: "text-purple-600" }
-    return { icon: "📁", type: "File", color: "text-gray-500" }
+    if (fileExtension === "pdf") return { icon: "📄", type: "PDF Document" }
+    if (["jpg", "jpeg", "png", "gif"].includes(fileExtension)) return { icon: "🖼️", type: "Image" }
+    if (["doc", "docx"].includes(fileExtension)) return { icon: "📝", type: "Word Document" }
+    return { icon: "📁", type: "File" }
   }
 
   const fileInfo = getFileInfo()
 
-  // Handle Download - increment counter then download
+  // Handle Download
   const handleDownload = async () => {
     if (isDownloading) return
-
     setIsDownloading(true)
 
     try {
-      console.log("Starting download process...")
-
-      // First increment the counter
-      const counterResponse = await fetch(`${API_URL}/api/notes/${note.id}/increment-download/`, {
+      // Increment counter
+      await fetch(`${API_URL}/api/notes/${note.id}/increment-download/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+      }).then(async (res) => {
+        if (res.ok) {
+          const data = await res.json()
+          setDownloadCount(data.downloads)
+          if (onDownloadCountUpdate) onDownloadCountUpdate(data.downloads)
+        }
       })
 
-      if (counterResponse.ok) {
-        const data = await counterResponse.json()
-        console.log("Counter updated:", data.downloads)
-        setDownloadCount(data.downloads)
-        if (onDownloadCountUpdate) {
-          onDownloadCountUpdate(data.downloads)
+      // Try downloading from different URLs
+      let downloadSuccess = false
+
+      for (const url of fileUrls) {
+        try {
+          const response = await fetch(url)
+          if (response.ok) {
+            const blob = await response.blob()
+
+            // Check if it's actually a file (not JSON error)
+            if (blob.size > 0 && !blob.type.includes("json")) {
+              const downloadUrl = window.URL.createObjectURL(blob)
+              const link = document.createElement("a")
+              link.href = downloadUrl
+              link.download = fileName
+              document.body.appendChild(link)
+              link.click()
+              window.URL.revokeObjectURL(downloadUrl)
+              document.body.removeChild(link)
+              downloadSuccess = true
+              console.log("Download successful from:", url)
+              break
+            }
+          }
+        } catch (err) {
+          console.log("Failed to download from:", url)
         }
       }
 
-      // Then download the file using direct link method
-      console.log("Downloading from:", directFileUrl)
-
-      // Create a temporary link and click it to trigger download
-      const link = document.createElement("a")
-      link.href = directFileUrl
-      link.download = fileName
-      link.target = "_blank"
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-
-      console.log("Download initiated")
+      if (!downloadSuccess) {
+        // Fallback: open in new tab
+        window.open(fileUrls[0], "_blank")
+      }
     } catch (error) {
       console.error("Download error:", error)
-      alert("Download failed. Please try the 'Open' button to view the file.")
+      window.open(fileUrls[0], "_blank")
     } finally {
       setIsDownloading(false)
     }
   }
 
-  // Handle Open - just open in new tab
+  // Handle Open/View
   const handleOpen = () => {
-    console.log("Opening file:", directFileUrl)
-    window.open(directFileUrl, "_blank")
+    // Try opening the first available URL
+    window.open(fileUrls[0], "_blank")
   }
 
   return (
     <div className="bg-white rounded-lg shadow-sm border">
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b bg-gray-50">
+      {/* Header with file info and buttons */}
+      <div className="flex items-center justify-between p-6">
         <div className="flex items-center">
-          <span className="text-2xl mr-3">{fileInfo.icon}</span>
+          <span className="text-3xl mr-4">{fileInfo.icon}</span>
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">{fileName}</h3>
-            <div className="flex items-center space-x-4">
-              <p className={`text-sm ${fileInfo.color} font-medium`}>{fileInfo.type}</p>
+            <h3 className="text-xl font-semibold text-gray-900">{fileName}</h3>
+            <div className="flex items-center space-x-4 mt-1">
+              <p className="text-sm text-gray-600 font-medium">{fileInfo.type}</p>
               <p className="text-sm text-gray-500">📥 {downloadCount} downloads</p>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-3">
           <button
             onClick={handleDownload}
             disabled={isDownloading}
-            className={`flex items-center px-4 py-2 text-white rounded-lg transition-colors ${
+            className={`flex items-center px-6 py-3 text-white rounded-lg font-medium transition-colors ${
               isDownloading ? "bg-gray-400 cursor-not-allowed" : "bg-green-600 hover:bg-green-700"
             }`}
           >
-            <Download className="h-4 w-4 mr-2" />
+            <Download className="h-5 w-5 mr-2" />
             {isDownloading ? "Downloading..." : "Download"}
           </button>
 
           <button
             onClick={handleOpen}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="flex items-center px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
           >
-            <ExternalLink className="h-4 w-4 mr-2" />
+            <ExternalLink className="h-5 w-5 mr-2" />
             Open
           </button>
         </div>
       </div>
 
-      {/* Simple PDF Viewer - No overlay, direct embed */}
-      {isPDF && (
-        <div className="p-4">
-          <div className="border rounded-lg overflow-hidden bg-white">
-            <iframe
-              src={directFileUrl}
-              width="100%"
-              height="600px"
-              className="border-0"
-              title={`PDF - ${note.title}`}
-              onError={() => {
-                console.error("PDF failed to load:", directFileUrl)
-                setViewerError(true)
-              }}
-            />
-            {viewerError && (
-              <div className="p-8 text-center">
-                <AlertCircle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
-                <p className="text-gray-700 mb-4">PDF failed to load in viewer.</p>
-                <button
-                  onClick={handleOpen}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Open in New Tab
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {/* Simple Image Viewer */}
-      {isImage && (
-        <div className="p-4">
-          <div className="text-center">
-            <img
-              src={directFileUrl || "/placeholder.svg"}
-              alt={note.title}
-              className="max-w-full h-auto mx-auto rounded-lg shadow-md"
-              style={{ maxHeight: "600px" }}
-              onError={(e) => {
-                console.error("Image failed to load:", directFileUrl)
-                e.target.src = "/placeholder.svg?height=400&width=600"
-              }}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Non-PDF/Image files */}
-      {!isPDF && !isImage && (
-        <div className="p-8 text-center">
-          <div className="text-6xl mb-4">{fileInfo.icon}</div>
-          <h4 className="text-xl font-semibold text-gray-900 mb-2">{fileInfo.type}</h4>
-          <p className="text-gray-600 mb-6">Click Download to save or Open to view in browser.</p>
-        </div>
-      )}
-
-      {/* Debug info */}
-      <div className="p-2 bg-gray-50 border-t text-xs text-gray-500">
-        <details>
-          <summary className="cursor-pointer">Debug Info</summary>
-          <div className="mt-2">
+      {/* Debug section - remove this after testing */}
+      <div className="px-6 pb-4">
+        <details className="text-sm">
+          <summary className="cursor-pointer text-gray-600 hover:text-gray-800">
+            🔧 Debug Info (Click to see file URLs)
+          </summary>
+          <div className="mt-2 p-3 bg-gray-50 rounded text-xs space-y-1">
             <p>
-              <strong>File:</strong> {note.file}
+              <strong>File path:</strong> {note.file}
             </p>
-            <p>
-              <strong>Direct URL:</strong> {directFileUrl}
-            </p>
-            <p>
-              <strong>Download API:</strong> {downloadApiUrl}
-            </p>
+            {fileUrls.map((url, index) => (
+              <p key={index}>
+                <strong>URL {index + 1}:</strong>{" "}
+                <a href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">
+                  {url}
+                </a>
+              </p>
+            ))}
           </div>
         </details>
       </div>
