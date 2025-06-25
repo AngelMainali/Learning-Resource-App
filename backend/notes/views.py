@@ -5,7 +5,6 @@ from django.http import HttpResponse, Http404, FileResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
-from django.views.decorators.clickjacking import xframe_options_exempt
 from django.views.decorators.http import require_http_methods
 from django.conf import settings
 import os
@@ -86,61 +85,47 @@ def download_note(request, pk):
     """Download note file"""
     try:
         note = get_object_or_404(Note, pk=pk)
-        print(f"Found note: {note.id} - {note.title}")
         
         if not note.file:
-            print("No file attached to note")
             raise Http404("No file attached to this note")
-        
-        print(f"File field value: {note.file}")
-        print(f"File name: {note.file.name}")
         
         # Get the actual file path
         try:
             file_path = note.file.path
-            print(f"File path: {file_path}")
-        except ValueError as e:
-            print(f"Error getting file path: {e}")
+        except ValueError:
             raise Http404("File path error")
         
         # Check if file exists
         if not os.path.exists(file_path):
-            print(f"File does not exist at: {file_path}")
             # Try alternative paths
             media_root = getattr(settings, 'MEDIA_ROOT', '')
             alt_path = os.path.join(media_root, str(note.file))
-            print(f"Trying alternative path: {alt_path}")
             
             if os.path.exists(alt_path):
                 file_path = alt_path
-                print(f"Found file at alternative path: {file_path}")
             else:
                 raise Http404("File not found on disk")
         
         # Get filename
         filename = os.path.basename(file_path)
-        print(f"Serving file: {filename}")
+        
+        # Increment download counter
+        note.downloads += 1
+        note.save(update_fields=['downloads'])
         
         # Create download response
-        try:
-            response = FileResponse(
-                open(file_path, 'rb'),
-                content_type='application/octet-stream'
-            )
-            response['Content-Disposition'] = f'attachment; filename="{filename}"'
-            response['Access-Control-Allow-Origin'] = '*'
-            response['Access-Control-Allow-Methods'] = 'GET'
-            response['Access-Control-Allow-Headers'] = '*'
-            
-            print("File response created successfully")
-            return response
-            
-        except Exception as e:
-            print(f"Error creating file response: {e}")
-            raise Http404(f"Error serving file: {str(e)}")
+        response = FileResponse(
+            open(file_path, 'rb'),
+            content_type='application/octet-stream'
+        )
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        response['Access-Control-Allow-Origin'] = '*'
+        response['Access-Control-Allow-Methods'] = 'GET'
+        response['Access-Control-Allow-Headers'] = '*'
+        
+        return response
         
     except Exception as e:
-        print(f"Download error: {e}")
         raise Http404(f"Download error: {str(e)}")
 
 @api_view(['POST'])
@@ -151,10 +136,8 @@ def increment_download(request, pk):
         note = get_object_or_404(Note, pk=pk)
         note.downloads += 1
         note.save(update_fields=['downloads'])
-        print(f"Download counter incremented for note {pk}: {note.downloads}")
         return Response({'downloads': note.downloads, 'success': True})
     except Exception as e:
-        print(f"Error incrementing download counter: {e}")
         return Response({'error': str(e)}, status=400)
 
 @method_decorator(csrf_exempt, name='dispatch')

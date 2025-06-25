@@ -16,9 +16,7 @@ urlpatterns = [
     path('notes/', views.NoteListView.as_view(), name='note-list'),
     path('notes/<int:pk>/', views.NoteDetailView.as_view(), name='note-detail'),
     
-    # File serving and download endpoints - FIXED
-    path('notes/<int:pk>/file/', views.serve_note_file, name='serve-note-file'),
-    path('notes/<int:pk>/serve/', views.serve_note_file, name='serve-note-file-alt'),
+    # Download endpoints only (removed serve_note_file)
     path('notes/<int:pk>/download/', views.download_note, name='download-note'),
     path('notes/<int:pk>/increment-download/', views.increment_download, name='increment-download'),
     
