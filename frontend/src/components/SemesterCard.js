@@ -3,7 +3,7 @@ import "./SemesterCard.css"
 
 const SemesterCard = ({ semester }) => {
   return (
-    <Link to={`/semester/${semester.id}`} className="semester-card">
+    <Link to={`/semester/${semester.number}`} className="semester-card">
       <div className="semester-number">
         <span className="number">{semester.number}</span>
       </div>
