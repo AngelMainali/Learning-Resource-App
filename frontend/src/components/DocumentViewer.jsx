@@ -148,19 +148,6 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
             </div>
           </div>
         )}
-
-        {/* Debug Info (remove this in production) */}
-        <div className="mt-4 p-3 bg-gray-50 rounded-lg text-xs text-gray-600">
-          <p>
-            <strong>Note ID:</strong> {note.id}
-          </p>
-          <p>
-            <strong>File Path:</strong> {note.file}
-          </p>
-          <p>
-            <strong>Download URL:</strong> {API_URL}/api/notes/{note.id}/download/
-          </p>
-        </div>
       </div>
     </div>
   )
