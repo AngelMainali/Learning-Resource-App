@@ -84,9 +84,6 @@ const SemesterDetail = () => {
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Loading Semester {id}...</p>
-          <p className="text-xs text-gray-500 mt-2">
-            API: {API_URL}/api/semesters/{id}/
-          </p>
         </div>
       </div>
     )
@@ -151,8 +148,6 @@ const SemesterDetail = () => {
 
             <div className="flex-1">
               <h1 className="text-3xl font-bold text-gray-900 mb-2">Semester {semester.number}</h1>
-              <p className="text-gray-600 mb-4">{semester.description || "No description available"}</p>
-
               <div className="text-sm text-gray-500">{semester.subjects?.length || 0} subjects available</div>
             </div>
           </div>
@@ -196,10 +191,6 @@ const SemesterDetail = () => {
                   </div>
                   <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
                 </div>
-
-                <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                  {subject.description || "No description available"}
-                </p>
 
                 <div className="flex items-center justify-between text-sm text-gray-500">
                   <div className="flex items-center space-x-4">
