@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { useParams, Link } from "react-router-dom"
-import { ArrowLeft, BookOpen, FileText, ArrowRight, AlertCircle } from "lucide-react"
+import { ArrowLeft, BookOpen, FileText, ArrowRight, AlertCircle } from 'lucide-react'
 import { API_URL } from "../config"
 
 const SemesterDetail = () => {
@@ -17,55 +17,76 @@ const SemesterDetail = () => {
     fetchSemester()
   }, [id])
 
-  const fetchSemester = async () => {
-    try {
-      setLoading(true)
-      setError("")
+const fetchSemester = async () => {
+  try {
+    setLoading(true)
+    setError("")
 
-      console.log(`SemesterDetail: Fetching semester data from: ${API_URL}/api/semesters/${id}/`)
+    console.log(`SemesterDetail: Fetching semester data from: ${API_URL}/api/semesters/${id}/`)
 
-      const response = await fetch(`${API_URL}/api/semesters/${id}/`)
+    const response = await fetch(`${API_URL}/api/semesters/${id}/`)
 
-      console.log("SemesterDetail: Response status:", response.status)
-      console.log("SemesterDetail: Response ok:", response.ok)
+    console.log("SemesterDetail: Response status:", response.status)
+    console.log("SemesterDetail: Response ok:", response.ok)
 
-      if (!response.ok) {
-        if (response.status === 404) {
-          throw new Error(`Semester with ID ${id} not found`)
-        } else if (response.status === 500) {
-          throw new Error("Server error - please try again later")
-        } else {
-          throw new Error(`HTTP error! status: ${response.status}`)
-        }
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error(`Semester with ID ${id} not found`)
+      } else if (response.status === 500) {
+        throw new Error("Server error - please try again later")
+      } else {
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
-
-      const data = await response.json()
-      console.log("SemesterDetail: Raw semester data received:", data)
-      console.log("SemesterDetail: Semester subjects:", data.subjects)
-      console.log("SemesterDetail: Subjects count:", data.subjects ? data.subjects.length : "undefined")
-      console.log("SemesterDetail: Total subjects property:", data.total_subjects)
-
-      // Add API endpoint debugging
-      console.log("SemesterDetail: Full API URL used:", `${API_URL}/api/semesters/${id}/`)
-
-      setSemester(data)
-      setError("")
-    } catch (error) {
-      console.error("SemesterDetail: Error fetching semester:", error)
-      setError(error.message)
-    } finally {
-      setLoading(false)
     }
+
+    const data = await response.json()
+    console.log("SemesterDetail: Raw semester data received:", data)
+    
+    setSemester(data)
+    
+    // Fetch subjects separately using the correct endpoint
+    fetchSubjectsForSemester(data.id)
+    
+    setError("")
+  } catch (error) {
+    console.error("SemesterDetail: Error fetching semester:", error)
+    setError(error.message)
+  } finally {
+    setLoading(false)
   }
+}
+
+// Add this new function to fetch subjects
+const fetchSubjectsForSemester = async (semesterId) => {
+  try {
+    console.log(`Fetching subjects for semester ${semesterId}...`)
+    const response = await fetch(`${API_URL}/api/semesters/${semesterId}/subjects/`)
+    
+    if (response.ok) {
+      const subjectsData = await response.json()
+      console.log("Subjects data received:", subjectsData)
+      
+      // Handle both array and paginated response
+      const subjects = subjectsData.results || subjectsData || []
+      
+      setSemester(prev => ({ ...prev, subjects: subjects }))
+    } else {
+      console.error("Failed to fetch subjects:", response.status)
+    }
+  } catch (error) {
+    console.error("Error fetching subjects:", error)
+  }
+}
 
   // Add this function after fetchSemester
   const fetchSubjectsSeparately = async () => {
     try {
       console.log("Fetching subjects separately...")
-      const response = await fetch(`${API_URL}/api/subjects/?semester=${id}`)
+      const response = await fetch(`${API_URL}/api/semesters/${semester.id}/subjects/`)
       if (response.ok) {
-        const subjects = await response.json()
-        console.log("Subjects fetched separately:", subjects)
+        const subjectsData = await response.json()
+        console.log("Subjects fetched separately:", subjectsData)
+        const subjects = subjectsData.results || subjectsData || []
         setSemester((prev) => ({ ...prev, subjects: subjects }))
       }
     } catch (error) {
