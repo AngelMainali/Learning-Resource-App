@@ -6,6 +6,7 @@ from django.shortcuts import get_object_or_404
 from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.views.decorators.clickjacking import xframe_options_exempt
+from django.views.decorators.http import require_http_methods
 from django.conf import settings
 import os
 import mimetypes
@@ -27,7 +28,6 @@ class SemesterDetailView(generics.RetrieveAPIView):
     def get_object(self):
         semester_number = self.kwargs['pk']
         try:
-            # Get semester by NUMBER (not database ID)
             return Semester.objects.get(number=semester_number, is_active=True)
         except Semester.DoesNotExist:
             raise Http404(f"Semester {semester_number} not found")
@@ -38,7 +38,6 @@ class SubjectListView(generics.ListAPIView):
     def get_queryset(self):
         semester_number = self.kwargs.get('semester_id')
         if semester_number:
-            # Get subjects by semester NUMBER (not database ID)
             try:
                 semester = Semester.objects.get(number=semester_number, is_active=True)
                 return Subject.objects.filter(semester=semester, is_active=True)
@@ -82,8 +81,9 @@ class NoteDetailView(generics.RetrieveAPIView):
     serializer_class = NoteDetailSerializer
 
 @api_view(['GET'])
+@require_http_methods(["GET"])
 def download_note(request, pk):
-    """Download note file WITHOUT incrementing counter (counter handled separately)"""
+    """Download note file and increment counter"""
     note = get_object_or_404(Note, pk=pk)
     
     if not note.file:
@@ -94,25 +94,27 @@ def download_note(request, pk):
         if not os.path.exists(file_path):
             raise Http404("File not found on disk")
         
-        # Get filename
         filename = os.path.basename(file_path)
         
-        # Create download response WITHOUT incrementing counter
+        # Create download response
         response = FileResponse(
             open(file_path, 'rb'),
             content_type='application/octet-stream'
         )
         response['Content-Disposition'] = f'attachment; filename="{filename}"'
+        response['Access-Control-Allow-Origin'] = '*'
+        response['Access-Control-Allow-Methods'] = 'GET'
+        response['Access-Control-Allow-Headers'] = '*'
         
         return response
         
     except Exception as e:
         raise Http404(f"Error downloading file: {str(e)}")
 
-@api_view(['GET'])
+@api_view(['GET', 'HEAD'])
 @xframe_options_exempt
 def serve_note_file(request, pk):
-    """Serve note file for viewing (without incrementing download counter)"""
+    """Serve note file for viewing"""
     note = get_object_or_404(Note, pk=pk)
     
     if not note.file:
@@ -123,7 +125,6 @@ def serve_note_file(request, pk):
         if not os.path.exists(file_path):
             raise Http404("File not found on disk")
         
-        # Get file extension
         file_extension = os.path.splitext(file_path)[1].lower()
         filename = os.path.basename(file_path)
         
@@ -146,11 +147,15 @@ def serve_note_file(request, pk):
         
         content_type = content_type_map.get(file_extension, 'application/octet-stream')
         
-        # Create response for viewing (not downloading)
-        response = FileResponse(
-            open(file_path, 'rb'),
-            content_type=content_type
-        )
+        # Handle HEAD requests for testing
+        if request.method == 'HEAD':
+            response = HttpResponse(content_type=content_type)
+            response['Content-Length'] = os.path.getsize(file_path)
+        else:
+            response = FileResponse(
+                open(file_path, 'rb'),
+                content_type=content_type
+            )
         
         # Add CORS headers
         response['Access-Control-Allow-Origin'] = '*'

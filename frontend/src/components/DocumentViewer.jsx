@@ -1,26 +1,18 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Download, ExternalLink, RefreshCw, AlertCircle, FileText } from "lucide-react"
+import { Download, AlertCircle, FileText, Eye } from "lucide-react"
 import { API_URL } from "../config"
 
 const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
   const [downloadCount, setDownloadCount] = useState(note?.downloads || 0)
   const [isDownloading, setIsDownloading] = useState(false)
-  const [workingUrl, setWorkingUrl] = useState(null)
-  const [isTestingUrls, setIsTestingUrls] = useState(false)
-  const [urlTestResults, setUrlTestResults] = useState([])
-  const [fileAccessible, setFileAccessible] = useState(false)
+  const [isViewing, setIsViewing] = useState(false)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     setDownloadCount(note?.downloads || 0)
-    setWorkingUrl(null)
-    setUrlTestResults([])
-    setFileAccessible(false)
-    // Auto-test URLs when component loads
-    if (note?.id) {
-      setTimeout(() => testFileAccess(), 500)
-    }
+    setError(null)
   }, [note?.downloads, note?.id])
 
   if (!note?.file) {
@@ -36,13 +28,6 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
   const fileName = note.file.split("/").pop() || "document"
   const fileExtension = fileName.split(".").pop()?.toLowerCase()
 
-  // Based on your Django views.py, these are the actual endpoints that should work
-  const primaryUrls = [
-    `${API_URL}/api/notes/${note.id}/serve/`,
-    `${API_URL}/api/notes/${note.id}/download/`,
-    `${API_URL}/api/notes/${note.id}/file/`,
-  ]
-
   // File type info
   const getFileInfo = () => {
     if (fileExtension === "pdf") return { icon: "📄", type: "PDF Document", color: "text-red-600" }
@@ -54,199 +39,98 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
 
   const fileInfo = getFileInfo()
 
-  // Quick test for file accessibility
-  const testFileAccess = async () => {
-    setIsTestingUrls(true)
-    console.log("🔍 Testing file access for note:", note.id)
-
-    for (const url of primaryUrls) {
-      try {
-        console.log("Testing:", url)
-        const response = await fetch(url, {
-          method: "HEAD",
-          cache: "no-cache",
-          headers: {
-            Accept: "*/*",
-          },
-        })
-
-        console.log(`${url} - Status: ${response.status}`)
-
-        if (response.ok) {
-          setWorkingUrl(url)
-          setFileAccessible(true)
-          console.log("✅ Found working URL:", url)
-          break
-        }
-      } catch (error) {
-        console.log(`❌ ${url} failed:`, error.message)
-      }
-    }
-
-    setIsTestingUrls(false)
-  }
-
-  // Comprehensive URL testing for debugging
-  const testAllUrls = async () => {
-    setIsTestingUrls(true)
-    const results = []
-
-    // Extract file path from the stored URL
-    let filePath = note.file
-    if (note.file.startsWith("http")) {
-      const urlParts = note.file.split("/media/")
-      if (urlParts.length > 1) {
-        filePath = urlParts[1]
-      }
-    }
-
-    // Comprehensive URL list for debugging
-    const allUrls = [
-      // Primary API endpoints (most likely to work)
-      `${API_URL}/api/notes/${note.id}/serve/`,
-      `${API_URL}/api/notes/${note.id}/download/`,
-      `${API_URL}/api/notes/${note.id}/file/`,
-
-      // Alternative API patterns
-      `${API_URL}/api/serve-note-file/${note.id}/`,
-      `${API_URL}/api/download-note-file/${note.id}/`,
-
-      // Direct media serving attempts
-      `${API_URL}/media/${filePath}`,
-      `${API_URL}/${filePath}`,
-
-      // Original URL
-      note.file,
-
-      // Static file attempts
-      `${API_URL}/static/media/${filePath}`,
-      `${API_URL}/files/${note.id}/`,
-    ]
-
-    console.log("🔍 Testing all URLs comprehensively...")
-
-    for (const [index, url] of allUrls.entries()) {
-      const result = {
-        index: index + 1,
-        url,
-        status: "Testing...",
-        error: null,
-        contentType: null,
-        isWorking: false,
-      }
-
-      try {
-        const response = await fetch(url, {
-          method: "HEAD",
-          cache: "no-cache",
-          headers: { Accept: "*/*" },
-        })
-
-        result.status = response.status
-        result.contentType = response.headers.get("content-type")
-
-        if (response.ok) {
-          result.isWorking = true
-          if (!workingUrl) {
-            setWorkingUrl(url)
-            setFileAccessible(true)
-          }
-        }
-      } catch (error) {
-        result.status = "Network Error"
-        result.error = error.message
-      }
-
-      results.push(result)
-    }
-
-    setUrlTestResults(results)
-    setIsTestingUrls(false)
-
-    console.log("=== Test Results ===")
-    results.forEach((r) => console.log(`${r.index}. ${r.status} - ${r.url}`))
-  }
-
-  // Handle Download with direct API call
+  // Handle Download
   const handleDownload = async () => {
     if (isDownloading) return
     setIsDownloading(true)
+    setError(null)
 
     try {
-      // Increment counter first
+      console.log("Starting download for note:", note.id)
+
+      // First increment the download counter
       try {
         const counterResponse = await fetch(`${API_URL}/api/notes/${note.id}/increment-download/`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
         })
+
         if (counterResponse.ok) {
           const data = await counterResponse.json()
           setDownloadCount(data.downloads)
           if (onDownloadCountUpdate) onDownloadCountUpdate(data.downloads)
+          console.log("Download counter updated:", data.downloads)
         }
       } catch (e) {
         console.warn("Counter update failed:", e)
       }
 
-      // Try download from working URL or test URLs
-      let downloadUrl = workingUrl
-      if (!downloadUrl) {
-        await testFileAccess()
-        downloadUrl = workingUrl
-      }
-
-      if (!downloadUrl) {
-        // Try the download endpoint specifically
-        downloadUrl = `${API_URL}/api/notes/${note.id}/download/`
-      }
-
-      console.log("Attempting download from:", downloadUrl)
+      // Now download the file
+      const downloadUrl = `${API_URL}/api/notes/${note.id}/download/`
+      console.log("Downloading from:", downloadUrl)
 
       const response = await fetch(downloadUrl, {
-        cache: "no-cache",
-        headers: { Accept: "*/*" },
+        method: "GET",
+        headers: {
+          Accept: "*/*",
+        },
       })
 
-      if (response.ok) {
-        const blob = await response.blob()
-        if (blob.size > 0) {
-          const url = window.URL.createObjectURL(blob)
-          const link = document.createElement("a")
-          link.href = url
-          link.download = fileName
-          document.body.appendChild(link)
-          link.click()
-          window.URL.revokeObjectURL(url)
-          document.body.removeChild(link)
-          console.log("✅ Download successful")
-        } else {
-          throw new Error("Empty file received")
-        }
-      } else {
+      if (!response.ok) {
         throw new Error(`Server returned ${response.status}: ${response.statusText}`)
       }
+
+      const blob = await response.blob()
+      if (blob.size === 0) {
+        throw new Error("Empty file received")
+      }
+
+      // Create download link
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement("a")
+      link.href = url
+      link.download = fileName
+      document.body.appendChild(link)
+      link.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(link)
+
+      console.log("✅ Download successful")
     } catch (error) {
       console.error("Download error:", error)
-      alert(`Download failed: ${error.message}\n\nPlease try the 'Test URLs' button to debug the issue.`)
+      setError(`Download failed: ${error.message}`)
     } finally {
       setIsDownloading(false)
     }
   }
 
-  // Handle Open/View
-  const handleOpen = async () => {
-    let openUrl = workingUrl
-    if (!openUrl) {
-      await testFileAccess()
-      openUrl = workingUrl
-    }
+  // Handle View/Open
+  const handleView = async () => {
+    if (isViewing) return
+    setIsViewing(true)
+    setError(null)
 
-    if (!openUrl) {
-      openUrl = `${API_URL}/api/notes/${note.id}/serve/`
-    }
+    try {
+      const viewUrl = `${API_URL}/api/notes/${note.id}/file/`
+      console.log("Opening file at:", viewUrl)
 
-    console.log("Opening URL:", openUrl)
-    window.open(openUrl, "_blank")
+      // Test if the file is accessible first
+      const testResponse = await fetch(viewUrl, { method: "HEAD" })
+      if (!testResponse.ok) {
+        throw new Error(`File not accessible: ${testResponse.status}`)
+      }
+
+      // Open in new tab
+      window.open(viewUrl, "_blank")
+    } catch (error) {
+      console.error("View error:", error)
+      setError(`Cannot open file: ${error.message}`)
+    } finally {
+      setIsViewing(false)
+    }
   }
 
   return (
@@ -262,11 +146,25 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
               <h3 className="text-xl font-semibold text-gray-900">{fileName}</h3>
               <div className="flex items-center space-x-4 mt-1">
                 <p className="text-sm text-gray-600 font-medium">{fileInfo.type}</p>
+                <p className="text-sm text-gray-500">{downloadCount} downloads</p>
               </div>
             </div>
           </div>
 
           <div className="flex items-center space-x-3">
+            {/* View Button */}
+            <button
+              onClick={handleView}
+              disabled={isViewing}
+              className={`flex items-center px-4 py-2 text-blue-600 border border-blue-600 rounded-lg font-medium transition-colors ${
+                isViewing ? "opacity-50 cursor-not-allowed" : "hover:bg-blue-50"
+              }`}
+            >
+              <Eye className="h-4 w-4 mr-2" />
+              {isViewing ? "Opening..." : "View"}
+            </button>
+
+            {/* Download Button */}
             <button
               onClick={handleDownload}
               disabled={isDownloading}
@@ -280,8 +178,32 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
           </div>
         </div>
 
-      </div>
+        {/* Error Display */}
+        {error && (
+          <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-center">
+              <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
+              <p className="text-sm text-red-700">{error}</p>
+            </div>
+          </div>
+        )}
 
+        {/* Debug Info (remove this in production) */}
+        <div className="mt-4 p-3 bg-gray-50 rounded-lg text-xs text-gray-600">
+          <p>
+            <strong>Note ID:</strong> {note.id}
+          </p>
+          <p>
+            <strong>File Path:</strong> {note.file}
+          </p>
+          <p>
+            <strong>Download URL:</strong> {API_URL}/api/notes/{note.id}/download/
+          </p>
+          <p>
+            <strong>View URL:</strong> {API_URL}/api/notes/{note.id}/file/
+          </p>
+        </div>
+      </div>
     </div>
   )
 }
