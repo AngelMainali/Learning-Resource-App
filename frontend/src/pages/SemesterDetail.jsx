@@ -6,14 +6,13 @@ import { ArrowLeft, BookOpen, FileText, ArrowRight, AlertCircle } from "lucide-r
 import { API_URL } from "../config"
 
 const SemesterDetail = () => {
-  const { id } = useParams()
+  const { id } = useParams() // This is now the semester NUMBER (1, 2, 3, etc.)
   const [semester, setSemester] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState("")
 
   useEffect(() => {
-    console.log("SemesterDetail: Component mounted with ID:", id)
-    console.log("SemesterDetail: API_URL:", API_URL)
+    console.log("SemesterDetail: Component mounted with semester number:", id)
     fetchSemester()
   }, [id])
 
@@ -22,13 +21,13 @@ const SemesterDetail = () => {
       setLoading(true)
       setError("")
 
-      console.log(`Fetching semester details for ID: ${id}`)
+      console.log(`Fetching semester details for semester number: ${id}`)
 
-      // First try to get semester by number (since URL uses semester number)
+      // Fetch semester by NUMBER (backend now handles this)
       const response = await fetch(`${API_URL}/api/semesters/${id}/`)
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: Failed to fetch semester ${id}`)
+        throw new Error(`HTTP ${response.status}: Semester ${id} not found`)
       }
 
       const data = await response.json()
@@ -36,31 +35,29 @@ const SemesterDetail = () => {
 
       setSemester(data)
 
-      // If subjects are not included in the main response, fetch them separately
+      // If subjects are not included, fetch them separately
       if (!data.subjects || data.subjects.length === 0) {
-        console.log("No subjects in main response, fetching separately...")
-        await fetchSubjectsForSemester(data.id || id)
+        console.log("Fetching subjects separately...")
+        await fetchSubjectsForSemester(id)
       }
     } catch (error) {
       console.error("Error fetching semester:", error)
-      setError(`Failed to load semester: ${error.message}`)
+      setError(`Failed to load semester ${id}: ${error.message}`)
     } finally {
       setLoading(false)
     }
   }
 
-  const fetchSubjectsForSemester = async (semesterId) => {
+  const fetchSubjectsForSemester = async (semesterNumber) => {
     try {
-      console.log(`Fetching subjects for semester ${semesterId}...`)
+      console.log(`Fetching subjects for semester number: ${semesterNumber}`)
 
-      // Try the subjects endpoint for this semester
-      const response = await fetch(`${API_URL}/api/semesters/${semesterId}/subjects/`)
+      const response = await fetch(`${API_URL}/api/semesters/${semesterNumber}/subjects/`)
 
       if (response.ok) {
         const subjectsData = await response.json()
         console.log("Subjects data received:", subjectsData)
 
-        // Handle both array and paginated response
         const subjects = subjectsData.results || subjectsData || []
 
         setSemester((prev) => ({
@@ -69,39 +66,10 @@ const SemesterDetail = () => {
           total_subjects: subjects.length,
         }))
       } else {
-        console.error("Failed to fetch subjects:", response.status, response.statusText)
-
-        // If the semester-specific endpoint fails, try the general subjects endpoint with filter
-        const fallbackResponse = await fetch(`${API_URL}/api/subjects/?semester=${semesterId}`)
-        if (fallbackResponse.ok) {
-          const fallbackData = await fallbackResponse.json()
-          const subjects = fallbackData.results || fallbackData || []
-          setSemester((prev) => ({
-            ...prev,
-            subjects: subjects,
-            total_subjects: subjects.length,
-          }))
-        }
+        console.error("Failed to fetch subjects:", response.status)
       }
     } catch (error) {
       console.error("Error fetching subjects:", error)
-    }
-  }
-
-  // Add this function after fetchSemester
-  const fetchSubjectsSeparately = async () => {
-    try {
-      console.log("Fetching subjects separately...")
-      // Use the actual semester database ID, not the URL parameter
-      const semesterId = semester?.id || id
-      const response = await fetch(`${API_URL}/api/semesters/${semesterId}/subjects/`)
-      if (response.ok) {
-        const subjects = await response.json()
-        console.log("Subjects fetched separately:", subjects)
-        setSemester((prev) => ({ ...prev, subjects: subjects.results || subjects }))
-      }
-    } catch (error) {
-      console.error("Failed to fetch subjects separately:", error)
     }
   }
 
@@ -115,9 +83,10 @@ const SemesterDetail = () => {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading semester details...</p>
-          <p className="text-xs text-gray-500 mt-2">Semester ID: {id}</p>
-          <p className="text-xs text-gray-500">API: {API_URL}</p>
+          <p className="text-gray-600">Loading Semester {id}...</p>
+          <p className="text-xs text-gray-500 mt-2">
+            API: {API_URL}/api/semesters/{id}/
+          </p>
         </div>
       </div>
     )
@@ -128,19 +97,8 @@ const SemesterDetail = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="text-center">
           <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-red-600 mb-2">Error Loading Semester</h1>
+          <h1 className="text-2xl font-bold text-red-600 mb-2">Error Loading Semester {id}</h1>
           <p className="text-gray-600 mt-2 mb-4">{error}</p>
-
-          <div className="bg-gray-100 p-4 rounded-lg mb-6 text-sm text-left max-w-md mx-auto">
-            <p>
-              <strong>Debug Info:</strong>
-            </p>
-            <p>Semester ID: {id}</p>
-            <p>API URL: {API_URL}</p>
-            <p>
-              Full URL: {API_URL}/api/semesters/{id}/
-            </p>
-          </div>
 
           <div className="space-x-4">
             <button
@@ -165,8 +123,7 @@ const SemesterDetail = () => {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900">Semester not found</h1>
-          <p className="text-gray-600 mt-2">Semester ID: {id}</p>
+          <h1 className="text-2xl font-bold text-gray-900">Semester {id} not found</h1>
           <Link to="/" className="text-blue-600 hover:text-blue-700 mt-4 inline-block">
             ← Back to Home
           </Link>
@@ -196,11 +153,7 @@ const SemesterDetail = () => {
               <h1 className="text-3xl font-bold text-gray-900 mb-2">Semester {semester.number}</h1>
               <p className="text-gray-600 mb-4">{semester.description || "No description available"}</p>
 
-              {/* Debug info */}
-              <div className="text-xs text-gray-500">
-                <p>Semester ID: {semester.id}</p>
-                <p>Subjects count: {semester.subjects ? semester.subjects.length : "undefined"}</p>
-              </div>
+              <div className="text-sm text-gray-500">{semester.subjects?.length || 0} subjects available</div>
             </div>
           </div>
         </div>
@@ -208,74 +161,23 @@ const SemesterDetail = () => {
 
       {/* Subjects Grid */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Enhanced Debug Section */}
-        <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <h4 className="font-medium text-yellow-800 mb-2">🔍 Debug Information</h4>
-          <div className="text-sm text-yellow-700 space-y-1">
-            <p>
-              <strong>Semester ID from URL:</strong> {id}
-            </p>
-            <p>
-              <strong>Semester Number:</strong> {semester?.number}
-            </p>
-            <p>
-              <strong>API URL:</strong> {API_URL}/api/semesters/{id}/
-            </p>
-            <p>
-              <strong>Subjects Array Exists:</strong> {semester?.subjects ? "Yes" : "No"}
-            </p>
-            <p>
-              <strong>Subjects Count:</strong> {semester?.subjects?.length || 0}
-            </p>
-            <p>
-              <strong>Total Subjects Property:</strong> {semester?.total_subjects || 0}
-            </p>
-            <p>
-              <strong>Raw Semester Keys:</strong> {semester ? Object.keys(semester).join(", ") : "None"}
-            </p>
-          </div>
-
-          {/* Test API Button */}
-          <button
-            onClick={() => {
-              console.log("Testing API endpoint directly...")
-              fetch(`${API_URL}/api/semesters/${id}/`)
-                .then((res) => res.json())
-                .then((data) => {
-                  console.log("Direct API test result:", data)
-                  alert(`API Response: ${JSON.stringify(data, null, 2)}`)
-                })
-                .catch((err) => {
-                  console.error("Direct API test failed:", err)
-                  alert(`API Error: ${err.message}`)
-                })
-            }}
-            className="mt-2 px-3 py-1 bg-yellow-200 text-yellow-800 rounded text-xs hover:bg-yellow-300"
-          >
-            🧪 Test API Directly
-          </button>
-        </div>
-        <button
-          onClick={fetchSubjectsSeparately}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 mr-4"
-        >
-          🔄 Fetch Subjects Manually
-        </button>
-        {!semester.subjects ? (
-          <div className="text-center py-12">
-            <AlertCircle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No subjects data</h3>
-            <p className="text-gray-600">The subjects property is missing from the API response.</p>
-            <div className="mt-4 text-xs text-gray-500">
-              <p>Raw semester data structure:</p>
-              <pre className="bg-gray-100 p-2 rounded text-left inline-block">{JSON.stringify(semester, null, 2)}</pre>
-            </div>
-          </div>
-        ) : semester.subjects.length === 0 ? (
+        {!semester.subjects || semester.subjects.length === 0 ? (
           <div className="text-center py-12">
             <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No subjects available</h3>
-            <p className="text-gray-600">Subjects for this semester will be added through the admin panel.</p>
+            <p className="text-gray-600">
+              {!semester.subjects
+                ? "Subjects data is not being loaded from the API."
+                : "No subjects have been added to this semester yet."}
+            </p>
+            <p className="text-sm text-gray-500 mt-2">Add subjects through the Django admin panel</p>
+
+            <button
+              onClick={() => fetchSubjectsForSemester(id)}
+              className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+            >
+              🔄 Retry Loading Subjects
+            </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -287,6 +189,7 @@ const SemesterDetail = () => {
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
+                    <div className="text-sm text-blue-600 font-medium mb-1">{subject.code}</div>
                     <h3 className="text-lg font-semibold text-gray-900 mb-2 group-hover:text-blue-600 transition-colors">
                       {subject.name}
                     </h3>
@@ -294,14 +197,18 @@ const SemesterDetail = () => {
                   <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-blue-600 group-hover:translate-x-1 transition-all" />
                 </div>
 
-                <p className="text-gray-600 text-sm mb-4 line-clamp-2">{subject.description || "No description"}</p>
+                <p className="text-gray-600 text-sm mb-4 line-clamp-2">
+                  {subject.description || "No description available"}
+                </p>
 
                 <div className="flex items-center justify-between text-sm text-gray-500">
-                  <div className="flex items-center">
-                    <FileText className="h-4 w-4 mr-1" />
-                    {subject.total_notes || 0} Notes
+                  <div className="flex items-center space-x-4">
+                    <div className="flex items-center">
+                      <FileText className="h-4 w-4 mr-1" />
+                      {subject.total_notes || 0} Notes
+                    </div>
+                    {subject.credits && <div className="text-xs">{subject.credits} Credits</div>}
                   </div>
-                  <div className="text-xs text-gray-400">Click to explore →</div>
                 </div>
               </Link>
             ))}

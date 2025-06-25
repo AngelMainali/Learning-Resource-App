@@ -27,31 +27,23 @@ class SemesterDetailView(generics.RetrieveAPIView):
     def get_object(self):
         semester_number = self.kwargs['pk']
         try:
-            # Try to get by semester number first
+            # Get semester by NUMBER (not database ID)
             return Semester.objects.get(number=semester_number, is_active=True)
         except Semester.DoesNotExist:
-            # Fallback to ID for backward compatibility
-            try:
-                return Semester.objects.get(id=semester_number, is_active=True)
-            except Semester.DoesNotExist:
-                raise Http404("Semester not found")
+            raise Http404(f"Semester {semester_number} not found")
 
 class SubjectListView(generics.ListAPIView):
     serializer_class = SubjectListSerializer
     
     def get_queryset(self):
-        semester_id = self.kwargs.get('semester_id')
-        if semester_id:
-            # Try to find semester by number first, then by ID
+        semester_number = self.kwargs.get('semester_id')
+        if semester_number:
+            # Get subjects by semester NUMBER (not database ID)
             try:
-                semester = Semester.objects.get(number=semester_id, is_active=True)
+                semester = Semester.objects.get(number=semester_number, is_active=True)
+                return Subject.objects.filter(semester=semester, is_active=True)
             except Semester.DoesNotExist:
-                try:
-                    semester = Semester.objects.get(id=semester_id, is_active=True)
-                except Semester.DoesNotExist:
-                    return Subject.objects.none()
-            
-            return Subject.objects.filter(semester=semester, is_active=True)
+                return Subject.objects.none()
         return Subject.objects.filter(is_active=True)
 
 class SubjectDetailView(generics.RetrieveAPIView):

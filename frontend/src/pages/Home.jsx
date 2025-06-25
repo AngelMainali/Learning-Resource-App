@@ -18,17 +18,15 @@ const Home = () => {
 
   const fetchSemesters = async () => {
     try {
-      // Debug logging
       console.log("API_URL from config:", API_URL)
       console.log("Attempting to fetch from:", `${API_URL}/api/semesters/`)
 
       const response = await axios.get(`${API_URL}/api/semesters/`, {
-        timeout: 15000, // 15 second timeout
+        timeout: 15000,
         headers: {
           Accept: "application/json",
           "Content-Type": "application/json",
         },
-        // Add withCredentials if needed for CORS
         withCredentials: false,
       })
 
@@ -38,6 +36,7 @@ const Home = () => {
       const semestersData = response.data.results || response.data || []
       console.log("Processed semesters data:", semestersData)
 
+      // Create a map of all 8 semesters, using semester NUMBER for URLs
       const allSemesters = []
       for (let i = 1; i <= 8; i++) {
         const existingSemester = semestersData.find((sem) => sem.number === i)
@@ -64,15 +63,8 @@ const Home = () => {
     } catch (error) {
       console.error("Detailed error information:")
       console.error("Error message:", error.message)
-      console.error("Error code:", error.code)
-      console.error("Error response:", error.response)
 
       if (error.response) {
-        // Server responded with error status
-        console.error("Response status:", error.response.status)
-        console.error("Response data:", error.response.data)
-        console.error("Response headers:", error.response.headers)
-
         if (error.response.status === 0) {
           setError("CORS Error: Backend not accessible from frontend domain")
         } else if (error.response.status >= 500) {
@@ -83,13 +75,10 @@ const Home = () => {
           setError(`HTTP Error ${error.response.status}: ${error.response.statusText}`)
         }
       } else if (error.request) {
-        // Request was made but no response received
-        console.error("No response received:", error.request)
         setError("Network Error: No response from backend server")
       } else if (error.code === "ECONNABORTED") {
         setError("Request Timeout: Backend server is too slow")
       } else {
-        // Something else happened
         setError(`Connection Error: ${error.message}`)
       }
 
@@ -111,7 +100,6 @@ const Home = () => {
     }
   }
 
-  // Add a retry function
   const retryConnection = () => {
     setLoading(true)
     setError("")
@@ -136,7 +124,6 @@ const Home = () => {
       <section className="bg-gradient-to-r from-blue-600 to-blue-800 text-white relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
           <div className="text-center">
-            {/* Large Logo above Engineer Sathi */}
             <div className="mb-6">
               <img
                 src={logoImage || "/placeholder.svg"}
@@ -151,7 +138,6 @@ const Home = () => {
             <h1 className="text-4xl md:text-6xl font-bold mb-6">Engineer Sathi</h1>
             <p className="text-xl md:text-2xl text-blue-100 mb-8 max-w-3xl mx-auto">Your Engineering Study Companion</p>
 
-            {/* YouTube CTA - Prominent placement */}
             <div className="flex justify-center mb-8">
               <a
                 href="https://www.youtube.com/@EngineerSathi-o9m"
@@ -228,7 +214,7 @@ const Home = () => {
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
             {semesters.map((semester) => (
-              <SemesterCard key={semester.id} semester={semester} />
+              <SemesterCard key={semester.number} semester={semester} />
             ))}
           </div>
         </div>
@@ -237,7 +223,7 @@ const Home = () => {
   )
 }
 
-// Enhanced Semester Card Component
+// Semester Card Component - Now uses semester NUMBER in URL
 const SemesterCard = ({ semester }) => {
   const isPlaceholder = semester.is_placeholder
   const hasContent = semester.total_subjects > 0
@@ -249,15 +235,14 @@ const SemesterCard = ({ semester }) => {
           <span className="text-3xl font-bold text-gray-400">{semester.number}</span>
         </div>
         <h3 className="text-xl font-semibold text-gray-400">Semester {semester.number}</h3>
-        <div className="absolute top-2 right-2">
-        </div>
+        <p className="text-xs text-gray-400 mt-2">Not available</p>
       </div>
     )
   }
 
   return (
     <Link
-      to={`/semester/${semester.id}`}
+      to={`/semester/${semester.number}`} // Use semester NUMBER, not database ID
       className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 hover:shadow-lg transition-all duration-300 hover:-translate-y-2 group text-center cursor-pointer hover:border-blue-300 relative"
     >
       <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
@@ -267,6 +252,8 @@ const SemesterCard = ({ semester }) => {
       <h3 className="text-xl font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
         Semester {semester.number}
       </h3>
+
+      <div className="text-xs text-gray-400 mt-1">{semester.total_subjects || 0} Subjects</div>
 
       <div className="mt-4 flex items-center justify-center text-blue-600 group-hover:text-blue-700">
         <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
