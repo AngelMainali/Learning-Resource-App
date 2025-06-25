@@ -1,13 +1,12 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Download, AlertCircle, FileText, Eye } from "lucide-react"
+import { Download, AlertCircle, FileText } from "lucide-react"
 import { API_URL } from "../config"
 
 const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
   const [downloadCount, setDownloadCount] = useState(note?.downloads || 0)
   const [isDownloading, setIsDownloading] = useState(false)
-  const [isViewing, setIsViewing] = useState(false)
   const [error, setError] = useState(null)
 
   useEffect(() => {
@@ -107,32 +106,6 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
     }
   }
 
-  // Handle View/Open
-  const handleView = async () => {
-    if (isViewing) return
-    setIsViewing(true)
-    setError(null)
-
-    try {
-      const viewUrl = `${API_URL}/api/notes/${note.id}/file/`
-      console.log("Opening file at:", viewUrl)
-
-      // Test if the file is accessible first
-      const testResponse = await fetch(viewUrl, { method: "HEAD" })
-      if (!testResponse.ok) {
-        throw new Error(`File not accessible: ${testResponse.status}`)
-      }
-
-      // Open in new tab
-      window.open(viewUrl, "_blank")
-    } catch (error) {
-      console.error("View error:", error)
-      setError(`Cannot open file: ${error.message}`)
-    } finally {
-      setIsViewing(false)
-    }
-  }
-
   return (
     <div className="bg-white rounded-lg shadow-sm border">
       {/* Header */}
@@ -152,18 +125,6 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
           </div>
 
           <div className="flex items-center space-x-3">
-            {/* View Button */}
-            <button
-              onClick={handleView}
-              disabled={isViewing}
-              className={`flex items-center px-4 py-2 text-blue-600 border border-blue-600 rounded-lg font-medium transition-colors ${
-                isViewing ? "opacity-50 cursor-not-allowed" : "hover:bg-blue-50"
-              }`}
-            >
-              <Eye className="h-4 w-4 mr-2" />
-              {isViewing ? "Opening..." : "View"}
-            </button>
-
             {/* Download Button */}
             <button
               onClick={handleDownload}
@@ -198,9 +159,6 @@ const DocumentViewer = ({ note, onDownload, onDownloadCountUpdate }) => {
           </p>
           <p>
             <strong>Download URL:</strong> {API_URL}/api/notes/{note.id}/download/
-          </p>
-          <p>
-            <strong>View URL:</strong> {API_URL}/api/notes/{note.id}/file/
           </p>
         </div>
       </div>

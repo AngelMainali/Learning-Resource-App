@@ -83,105 +83,79 @@ class NoteDetailView(generics.RetrieveAPIView):
 @api_view(['GET'])
 @require_http_methods(["GET"])
 def download_note(request, pk):
-    """Download note file and increment counter"""
-    note = get_object_or_404(Note, pk=pk)
-    
-    if not note.file:
-        raise Http404("File not found")
-    
+    """Download note file"""
     try:
-        file_path = note.file.path
-        if not os.path.exists(file_path):
-            raise Http404("File not found on disk")
+        note = get_object_or_404(Note, pk=pk)
+        print(f"Found note: {note.id} - {note.title}")
         
+        if not note.file:
+            print("No file attached to note")
+            raise Http404("No file attached to this note")
+        
+        print(f"File field value: {note.file}")
+        print(f"File name: {note.file.name}")
+        
+        # Get the actual file path
+        try:
+            file_path = note.file.path
+            print(f"File path: {file_path}")
+        except ValueError as e:
+            print(f"Error getting file path: {e}")
+            raise Http404("File path error")
+        
+        # Check if file exists
+        if not os.path.exists(file_path):
+            print(f"File does not exist at: {file_path}")
+            # Try alternative paths
+            media_root = getattr(settings, 'MEDIA_ROOT', '')
+            alt_path = os.path.join(media_root, str(note.file))
+            print(f"Trying alternative path: {alt_path}")
+            
+            if os.path.exists(alt_path):
+                file_path = alt_path
+                print(f"Found file at alternative path: {file_path}")
+            else:
+                raise Http404("File not found on disk")
+        
+        # Get filename
         filename = os.path.basename(file_path)
+        print(f"Serving file: {filename}")
         
         # Create download response
-        response = FileResponse(
-            open(file_path, 'rb'),
-            content_type='application/octet-stream'
-        )
-        response['Content-Disposition'] = f'attachment; filename="{filename}"'
-        response['Access-Control-Allow-Origin'] = '*'
-        response['Access-Control-Allow-Methods'] = 'GET'
-        response['Access-Control-Allow-Headers'] = '*'
-        
-        return response
-        
-    except Exception as e:
-        raise Http404(f"Error downloading file: {str(e)}")
-
-@api_view(['GET', 'HEAD'])
-@xframe_options_exempt
-def serve_note_file(request, pk):
-    """Serve note file for viewing"""
-    note = get_object_or_404(Note, pk=pk)
-    
-    if not note.file:
-        raise Http404("File not found")
-    
-    try:
-        file_path = note.file.path
-        if not os.path.exists(file_path):
-            raise Http404("File not found on disk")
-        
-        file_extension = os.path.splitext(file_path)[1].lower()
-        filename = os.path.basename(file_path)
-        
-        # Set content type
-        content_type_map = {
-            '.pdf': 'application/pdf',
-            '.doc': 'application/msword',
-            '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-            '.ppt': 'application/vnd.ms-powerpoint',
-            '.pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-            '.xls': 'application/vnd.ms-excel',
-            '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-            '.jpg': 'image/jpeg',
-            '.jpeg': 'image/jpeg',
-            '.png': 'image/png',
-            '.gif': 'image/gif',
-            '.txt': 'text/plain',
-            '.csv': 'text/csv',
-        }
-        
-        content_type = content_type_map.get(file_extension, 'application/octet-stream')
-        
-        # Handle HEAD requests for testing
-        if request.method == 'HEAD':
-            response = HttpResponse(content_type=content_type)
-            response['Content-Length'] = os.path.getsize(file_path)
-        else:
+        try:
             response = FileResponse(
                 open(file_path, 'rb'),
-                content_type=content_type
+                content_type='application/octet-stream'
             )
-        
-        # Add CORS headers
-        response['Access-Control-Allow-Origin'] = '*'
-        response['Access-Control-Allow-Methods'] = 'GET, HEAD, OPTIONS'
-        response['Access-Control-Allow-Headers'] = '*'
-        response['Cache-Control'] = 'public, max-age=3600'
-        
-        # Set content disposition for inline viewing
-        if file_extension in ['.pdf', '.jpg', '.jpeg', '.png', '.gif', '.txt']:
-            response['Content-Disposition'] = f'inline; filename="{filename}"'
-        else:
             response['Content-Disposition'] = f'attachment; filename="{filename}"'
-        
-        return response
+            response['Access-Control-Allow-Origin'] = '*'
+            response['Access-Control-Allow-Methods'] = 'GET'
+            response['Access-Control-Allow-Headers'] = '*'
+            
+            print("File response created successfully")
+            return response
+            
+        except Exception as e:
+            print(f"Error creating file response: {e}")
+            raise Http404(f"Error serving file: {str(e)}")
         
     except Exception as e:
-        raise Http404(f"Error serving file: {str(e)}")
+        print(f"Download error: {e}")
+        raise Http404(f"Download error: {str(e)}")
 
 @api_view(['POST'])
 @csrf_exempt
 def increment_download(request, pk):
     """Increment download counter only"""
-    note = get_object_or_404(Note, pk=pk)
-    note.downloads += 1
-    note.save(update_fields=['downloads'])
-    return Response({'downloads': note.downloads, 'success': True})
+    try:
+        note = get_object_or_404(Note, pk=pk)
+        note.downloads += 1
+        note.save(update_fields=['downloads'])
+        print(f"Download counter incremented for note {pk}: {note.downloads}")
+        return Response({'downloads': note.downloads, 'success': True})
+    except Exception as e:
+        print(f"Error incrementing download counter: {e}")
+        return Response({'error': str(e)}, status=400)
 
 @method_decorator(csrf_exempt, name='dispatch')
 class CommentCreateView(generics.CreateAPIView):
